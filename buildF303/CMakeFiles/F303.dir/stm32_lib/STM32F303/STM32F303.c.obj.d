@@ -1,5 +1,6 @@
-CMakeFiles/F303.dir/main.c.obj: /home/wegkamp/development/stm_daq/main.c \
- /home/wegkamp/development/stm_daq/main.h \
+CMakeFiles/F303.dir/stm32_lib/STM32F303/STM32F303.c.obj: \
+ /home/wegkamp/development/stm_daq/stm32_lib/STM32F303/STM32F303.c \
+ /home/wegkamp/development/stm_daq/stm32_lib/STM32F303/../STM32.h \
  /usr/share/arm-gnu-toolchain-14.2.rel1-aarch64-arm-none-eabi/lib/gcc/arm-none-eabi/14.2.1/include/stdint.h \
  /usr/share/arm-gnu-toolchain-14.2.rel1-aarch64-arm-none-eabi/arm-none-eabi/include/stdint.h \
  /usr/share/arm-gnu-toolchain-14.2.rel1-aarch64-arm-none-eabi/arm-none-eabi/include/machine/_default_types.h \
@@ -7,4 +8,4 @@ CMakeFiles/F303.dir/main.c.obj: /home/wegkamp/development/stm_daq/main.c \
  /usr/share/arm-gnu-toolchain-14.2.rel1-aarch64-arm-none-eabi/arm-none-eabi/include/_newlib_version.h \
  /usr/share/arm-gnu-toolchain-14.2.rel1-aarch64-arm-none-eabi/arm-none-eabi/include/sys/_intsup.h \
  /usr/share/arm-gnu-toolchain-14.2.rel1-aarch64-arm-none-eabi/arm-none-eabi/include/sys/_stdint.h \
- /home/wegkamp/development/stm_daq/stm32_lib/STM32.h
+ /home/wegkamp/development/stm_daq/stm32_lib/STM32F303/STM32F303.h

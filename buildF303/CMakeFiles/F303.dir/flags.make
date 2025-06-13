@@ -4,7 +4,7 @@
 # compile C with /usr/bin/arm-none-eabi-gcc
 C_DEFINES = -DSTM32F303
 
-C_INCLUDES = -I/home/wegkamp/development/STM32_daq
+C_INCLUDES = -I/home/wegkamp/development/stm_daq
 
 C_FLAGS = -mcpu=cortex-m4 -mthumb -Wall -Werror -O0 -nostdlib -ffunction-sections -fdata-sections -std=c99
 

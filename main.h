@@ -1,5 +1,5 @@
 #include <stdint.h>
-#include "STM32_lib/STM32.h"
+#include "stm32_lib/STM32.h"
 
 
 /*#ifdef STM32L053

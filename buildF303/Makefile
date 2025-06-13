@@ -57,10 +57,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/wegkamp/development/STM32_daq
+CMAKE_SOURCE_DIR = /home/wegkamp/development/stm_daq
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/wegkamp/development/STM32_daq/buildF303
+CMAKE_BINARY_DIR = /home/wegkamp/development/stm_daq/buildF303
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -87,9 +87,9 @@ rebuild_cache/fast: rebuild_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/wegkamp/development/STM32_daq/buildF303/CMakeFiles /home/wegkamp/development/STM32_daq/buildF303//CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/wegkamp/development/stm_daq/buildF303/CMakeFiles /home/wegkamp/development/stm_daq/buildF303//CMakeFiles/progress.marks
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/wegkamp/development/STM32_daq/buildF303/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/wegkamp/development/stm_daq/buildF303/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -129,30 +129,6 @@ F303/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/F303.dir/build.make CMakeFiles/F303.dir/build
 .PHONY : F303/fast
 
-STM32_lib/STM32F303/STM32F303.obj: STM32_lib/STM32F303/STM32F303.c.obj
-.PHONY : STM32_lib/STM32F303/STM32F303.obj
-
-# target to build an object file
-STM32_lib/STM32F303/STM32F303.c.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/F303.dir/build.make CMakeFiles/F303.dir/STM32_lib/STM32F303/STM32F303.c.obj
-.PHONY : STM32_lib/STM32F303/STM32F303.c.obj
-
-STM32_lib/STM32F303/STM32F303.i: STM32_lib/STM32F303/STM32F303.c.i
-.PHONY : STM32_lib/STM32F303/STM32F303.i
-
-# target to preprocess a source file
-STM32_lib/STM32F303/STM32F303.c.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/F303.dir/build.make CMakeFiles/F303.dir/STM32_lib/STM32F303/STM32F303.c.i
-.PHONY : STM32_lib/STM32F303/STM32F303.c.i
-
-STM32_lib/STM32F303/STM32F303.s: STM32_lib/STM32F303/STM32F303.c.s
-.PHONY : STM32_lib/STM32F303/STM32F303.s
-
-# target to generate assembly for a file
-STM32_lib/STM32F303/STM32F303.c.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/F303.dir/build.make CMakeFiles/F303.dir/STM32_lib/STM32F303/STM32F303.c.s
-.PHONY : STM32_lib/STM32F303/STM32F303.c.s
-
 main.obj: main.c.obj
 .PHONY : main.obj
 
@@ -177,6 +153,54 @@ main.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/F303.dir/build.make CMakeFiles/F303.dir/main.c.s
 .PHONY : main.c.s
 
+stm32_lib/STM32.obj: stm32_lib/STM32.c.obj
+.PHONY : stm32_lib/STM32.obj
+
+# target to build an object file
+stm32_lib/STM32.c.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/F303.dir/build.make CMakeFiles/F303.dir/stm32_lib/STM32.c.obj
+.PHONY : stm32_lib/STM32.c.obj
+
+stm32_lib/STM32.i: stm32_lib/STM32.c.i
+.PHONY : stm32_lib/STM32.i
+
+# target to preprocess a source file
+stm32_lib/STM32.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/F303.dir/build.make CMakeFiles/F303.dir/stm32_lib/STM32.c.i
+.PHONY : stm32_lib/STM32.c.i
+
+stm32_lib/STM32.s: stm32_lib/STM32.c.s
+.PHONY : stm32_lib/STM32.s
+
+# target to generate assembly for a file
+stm32_lib/STM32.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/F303.dir/build.make CMakeFiles/F303.dir/stm32_lib/STM32.c.s
+.PHONY : stm32_lib/STM32.c.s
+
+stm32_lib/STM32F303/STM32F303.obj: stm32_lib/STM32F303/STM32F303.c.obj
+.PHONY : stm32_lib/STM32F303/STM32F303.obj
+
+# target to build an object file
+stm32_lib/STM32F303/STM32F303.c.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/F303.dir/build.make CMakeFiles/F303.dir/stm32_lib/STM32F303/STM32F303.c.obj
+.PHONY : stm32_lib/STM32F303/STM32F303.c.obj
+
+stm32_lib/STM32F303/STM32F303.i: stm32_lib/STM32F303/STM32F303.c.i
+.PHONY : stm32_lib/STM32F303/STM32F303.i
+
+# target to preprocess a source file
+stm32_lib/STM32F303/STM32F303.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/F303.dir/build.make CMakeFiles/F303.dir/stm32_lib/STM32F303/STM32F303.c.i
+.PHONY : stm32_lib/STM32F303/STM32F303.c.i
+
+stm32_lib/STM32F303/STM32F303.s: stm32_lib/STM32F303/STM32F303.c.s
+.PHONY : stm32_lib/STM32F303/STM32F303.s
+
+# target to generate assembly for a file
+stm32_lib/STM32F303/STM32F303.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/F303.dir/build.make CMakeFiles/F303.dir/stm32_lib/STM32F303/STM32F303.c.s
+.PHONY : stm32_lib/STM32F303/STM32F303.c.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -186,12 +210,15 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... F303"
-	@echo "... STM32_lib/STM32F303/STM32F303.obj"
-	@echo "... STM32_lib/STM32F303/STM32F303.i"
-	@echo "... STM32_lib/STM32F303/STM32F303.s"
 	@echo "... main.obj"
 	@echo "... main.i"
 	@echo "... main.s"
+	@echo "... stm32_lib/STM32.obj"
+	@echo "... stm32_lib/STM32.i"
+	@echo "... stm32_lib/STM32.s"
+	@echo "... stm32_lib/STM32F303/STM32F303.obj"
+	@echo "... stm32_lib/STM32F303/STM32F303.i"
+	@echo "... stm32_lib/STM32F303/STM32F303.s"
 .PHONY : help
 
 

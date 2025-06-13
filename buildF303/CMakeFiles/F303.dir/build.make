@@ -53,10 +53,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/wegkamp/development/STM32_daq
+CMAKE_SOURCE_DIR = /home/wegkamp/development/stm_daq
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/wegkamp/development/STM32_daq/buildF303
+CMAKE_BINARY_DIR = /home/wegkamp/development/stm_daq/buildF303
 
 # Include any dependencies generated for this target.
 include CMakeFiles/F303.dir/depend.make
@@ -70,52 +70,68 @@ include CMakeFiles/F303.dir/progress.make
 include CMakeFiles/F303.dir/flags.make
 
 CMakeFiles/F303.dir/main.c.obj: CMakeFiles/F303.dir/flags.make
-CMakeFiles/F303.dir/main.c.obj: /home/wegkamp/development/STM32_daq/main.c
+CMakeFiles/F303.dir/main.c.obj: /home/wegkamp/development/stm_daq/main.c
 CMakeFiles/F303.dir/main.c.obj: CMakeFiles/F303.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/wegkamp/development/STM32_daq/buildF303/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building C object CMakeFiles/F303.dir/main.c.obj"
-	/usr/bin/arm-none-eabi-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/F303.dir/main.c.obj -MF CMakeFiles/F303.dir/main.c.obj.d -o CMakeFiles/F303.dir/main.c.obj -c /home/wegkamp/development/STM32_daq/main.c
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/wegkamp/development/stm_daq/buildF303/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building C object CMakeFiles/F303.dir/main.c.obj"
+	/usr/bin/arm-none-eabi-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/F303.dir/main.c.obj -MF CMakeFiles/F303.dir/main.c.obj.d -o CMakeFiles/F303.dir/main.c.obj -c /home/wegkamp/development/stm_daq/main.c
 
 CMakeFiles/F303.dir/main.c.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing C source to CMakeFiles/F303.dir/main.c.i"
-	/usr/bin/arm-none-eabi-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/wegkamp/development/STM32_daq/main.c > CMakeFiles/F303.dir/main.c.i
+	/usr/bin/arm-none-eabi-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/wegkamp/development/stm_daq/main.c > CMakeFiles/F303.dir/main.c.i
 
 CMakeFiles/F303.dir/main.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling C source to assembly CMakeFiles/F303.dir/main.c.s"
-	/usr/bin/arm-none-eabi-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/wegkamp/development/STM32_daq/main.c -o CMakeFiles/F303.dir/main.c.s
+	/usr/bin/arm-none-eabi-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/wegkamp/development/stm_daq/main.c -o CMakeFiles/F303.dir/main.c.s
 
-CMakeFiles/F303.dir/STM32_lib/STM32F303/STM32F303.c.obj: CMakeFiles/F303.dir/flags.make
-CMakeFiles/F303.dir/STM32_lib/STM32F303/STM32F303.c.obj: /home/wegkamp/development/STM32_daq/STM32_lib/STM32F303/STM32F303.c
-CMakeFiles/F303.dir/STM32_lib/STM32F303/STM32F303.c.obj: CMakeFiles/F303.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/wegkamp/development/STM32_daq/buildF303/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building C object CMakeFiles/F303.dir/STM32_lib/STM32F303/STM32F303.c.obj"
-	/usr/bin/arm-none-eabi-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/F303.dir/STM32_lib/STM32F303/STM32F303.c.obj -MF CMakeFiles/F303.dir/STM32_lib/STM32F303/STM32F303.c.obj.d -o CMakeFiles/F303.dir/STM32_lib/STM32F303/STM32F303.c.obj -c /home/wegkamp/development/STM32_daq/STM32_lib/STM32F303/STM32F303.c
+CMakeFiles/F303.dir/stm32_lib/STM32.c.obj: CMakeFiles/F303.dir/flags.make
+CMakeFiles/F303.dir/stm32_lib/STM32.c.obj: /home/wegkamp/development/stm_daq/stm32_lib/STM32.c
+CMakeFiles/F303.dir/stm32_lib/STM32.c.obj: CMakeFiles/F303.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/wegkamp/development/stm_daq/buildF303/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building C object CMakeFiles/F303.dir/stm32_lib/STM32.c.obj"
+	/usr/bin/arm-none-eabi-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/F303.dir/stm32_lib/STM32.c.obj -MF CMakeFiles/F303.dir/stm32_lib/STM32.c.obj.d -o CMakeFiles/F303.dir/stm32_lib/STM32.c.obj -c /home/wegkamp/development/stm_daq/stm32_lib/STM32.c
 
-CMakeFiles/F303.dir/STM32_lib/STM32F303/STM32F303.c.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing C source to CMakeFiles/F303.dir/STM32_lib/STM32F303/STM32F303.c.i"
-	/usr/bin/arm-none-eabi-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/wegkamp/development/STM32_daq/STM32_lib/STM32F303/STM32F303.c > CMakeFiles/F303.dir/STM32_lib/STM32F303/STM32F303.c.i
+CMakeFiles/F303.dir/stm32_lib/STM32.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing C source to CMakeFiles/F303.dir/stm32_lib/STM32.c.i"
+	/usr/bin/arm-none-eabi-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/wegkamp/development/stm_daq/stm32_lib/STM32.c > CMakeFiles/F303.dir/stm32_lib/STM32.c.i
 
-CMakeFiles/F303.dir/STM32_lib/STM32F303/STM32F303.c.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling C source to assembly CMakeFiles/F303.dir/STM32_lib/STM32F303/STM32F303.c.s"
-	/usr/bin/arm-none-eabi-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/wegkamp/development/STM32_daq/STM32_lib/STM32F303/STM32F303.c -o CMakeFiles/F303.dir/STM32_lib/STM32F303/STM32F303.c.s
+CMakeFiles/F303.dir/stm32_lib/STM32.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling C source to assembly CMakeFiles/F303.dir/stm32_lib/STM32.c.s"
+	/usr/bin/arm-none-eabi-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/wegkamp/development/stm_daq/stm32_lib/STM32.c -o CMakeFiles/F303.dir/stm32_lib/STM32.c.s
+
+CMakeFiles/F303.dir/stm32_lib/STM32F303/STM32F303.c.obj: CMakeFiles/F303.dir/flags.make
+CMakeFiles/F303.dir/stm32_lib/STM32F303/STM32F303.c.obj: /home/wegkamp/development/stm_daq/stm32_lib/STM32F303/STM32F303.c
+CMakeFiles/F303.dir/stm32_lib/STM32F303/STM32F303.c.obj: CMakeFiles/F303.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/wegkamp/development/stm_daq/buildF303/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building C object CMakeFiles/F303.dir/stm32_lib/STM32F303/STM32F303.c.obj"
+	/usr/bin/arm-none-eabi-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/F303.dir/stm32_lib/STM32F303/STM32F303.c.obj -MF CMakeFiles/F303.dir/stm32_lib/STM32F303/STM32F303.c.obj.d -o CMakeFiles/F303.dir/stm32_lib/STM32F303/STM32F303.c.obj -c /home/wegkamp/development/stm_daq/stm32_lib/STM32F303/STM32F303.c
+
+CMakeFiles/F303.dir/stm32_lib/STM32F303/STM32F303.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing C source to CMakeFiles/F303.dir/stm32_lib/STM32F303/STM32F303.c.i"
+	/usr/bin/arm-none-eabi-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/wegkamp/development/stm_daq/stm32_lib/STM32F303/STM32F303.c > CMakeFiles/F303.dir/stm32_lib/STM32F303/STM32F303.c.i
+
+CMakeFiles/F303.dir/stm32_lib/STM32F303/STM32F303.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling C source to assembly CMakeFiles/F303.dir/stm32_lib/STM32F303/STM32F303.c.s"
+	/usr/bin/arm-none-eabi-gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/wegkamp/development/stm_daq/stm32_lib/STM32F303/STM32F303.c -o CMakeFiles/F303.dir/stm32_lib/STM32F303/STM32F303.c.s
 
 # Object files for target F303
 F303_OBJECTS = \
 "CMakeFiles/F303.dir/main.c.obj" \
-"CMakeFiles/F303.dir/STM32_lib/STM32F303/STM32F303.c.obj"
+"CMakeFiles/F303.dir/stm32_lib/STM32.c.obj" \
+"CMakeFiles/F303.dir/stm32_lib/STM32F303/STM32F303.c.obj"
 
 # External object files for target F303
 F303_EXTERNAL_OBJECTS =
 
-/home/wegkamp/development/STM32_daq/F303.elf: CMakeFiles/F303.dir/main.c.obj
-/home/wegkamp/development/STM32_daq/F303.elf: CMakeFiles/F303.dir/STM32_lib/STM32F303/STM32F303.c.obj
-/home/wegkamp/development/STM32_daq/F303.elf: CMakeFiles/F303.dir/build.make
-/home/wegkamp/development/STM32_daq/F303.elf: CMakeFiles/F303.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/wegkamp/development/STM32_daq/buildF303/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Linking C executable /home/wegkamp/development/STM32_daq/F303.elf"
+/home/wegkamp/development/stm_daq/F303.elf: CMakeFiles/F303.dir/main.c.obj
+/home/wegkamp/development/stm_daq/F303.elf: CMakeFiles/F303.dir/stm32_lib/STM32.c.obj
+/home/wegkamp/development/stm_daq/F303.elf: CMakeFiles/F303.dir/stm32_lib/STM32F303/STM32F303.c.obj
+/home/wegkamp/development/stm_daq/F303.elf: CMakeFiles/F303.dir/build.make
+/home/wegkamp/development/stm_daq/F303.elf: CMakeFiles/F303.dir/link.txt
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/wegkamp/development/stm_daq/buildF303/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Linking C executable /home/wegkamp/development/stm_daq/F303.elf"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/F303.dir/link.txt --verbose=$(VERBOSE)
-	arm-none-eabi-size /home/wegkamp/development/STM32_daq/F303.elf
-	arm-none-eabi-objcopy -O binary /home/wegkamp/development/STM32_daq/F303.elf /home/wegkamp/development/STM32_daq/F303.bin
+	arm-none-eabi-size /home/wegkamp/development/stm_daq/F303.elf
+	arm-none-eabi-objcopy -O binary /home/wegkamp/development/stm_daq/F303.elf /home/wegkamp/development/stm_daq/F303.bin
 
 # Rule to build all files generated by this target.
-CMakeFiles/F303.dir/build: /home/wegkamp/development/STM32_daq/F303.elf
+CMakeFiles/F303.dir/build: /home/wegkamp/development/stm_daq/F303.elf
 .PHONY : CMakeFiles/F303.dir/build
 
 CMakeFiles/F303.dir/clean:
@@ -123,6 +139,6 @@ CMakeFiles/F303.dir/clean:
 .PHONY : CMakeFiles/F303.dir/clean
 
 CMakeFiles/F303.dir/depend:
-	cd /home/wegkamp/development/STM32_daq/buildF303 && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/wegkamp/development/STM32_daq /home/wegkamp/development/STM32_daq /home/wegkamp/development/STM32_daq/buildF303 /home/wegkamp/development/STM32_daq/buildF303 /home/wegkamp/development/STM32_daq/buildF303/CMakeFiles/F303.dir/DependInfo.cmake --color=$(COLOR)
+	cd /home/wegkamp/development/stm_daq/buildF303 && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/wegkamp/development/stm_daq /home/wegkamp/development/stm_daq /home/wegkamp/development/stm_daq/buildF303 /home/wegkamp/development/stm_daq/buildF303 /home/wegkamp/development/stm_daq/buildF303/CMakeFiles/F303.dir/DependInfo.cmake --color=$(COLOR)
 .PHONY : CMakeFiles/F303.dir/depend
 

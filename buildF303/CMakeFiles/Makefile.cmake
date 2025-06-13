@@ -7,8 +7,8 @@ set(CMAKE_DEPENDS_GENERATOR "Unix Makefiles")
 # The top level Makefile was generated from the following files:
 set(CMAKE_MAKEFILE_DEPENDS
   "CMakeCache.txt"
-  "/home/wegkamp/development/STM32_daq/CMakeLists.txt"
-  "/home/wegkamp/development/STM32_daq/STM32Toolchain.txt"
+  "/home/wegkamp/development/stm_daq/CMakeLists.txt"
+  "/home/wegkamp/development/stm_daq/STM32Toolchain.txt"
   "CMakeFiles/3.25.1/CMakeASMCompiler.cmake"
   "CMakeFiles/3.25.1/CMakeCCompiler.cmake"
   "CMakeFiles/3.25.1/CMakeCXXCompiler.cmake"

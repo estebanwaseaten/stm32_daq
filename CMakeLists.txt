@@ -20,6 +20,7 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR})
 
 set(SOURCE_LIST
 	"main.c"
+	"stm32_lib/STM32.c"
 )
 
 message("*** using toolchain: ${CMAKE_TOOLCHAIN_FILE}")
@@ -33,11 +34,11 @@ if( MCU MATCHES "L053" )
 	#add "library"
 	set(SOURCE_LIST
 		${SOURCE_LIST}
-		"${CMAKE_SOURCE_DIR}/STM32_lib/STM32L053/STM32L053.c"
+		"${CMAKE_SOURCE_DIR}/stm32_lib/STM32L053/STM32L053.c"
 	)
 
 	set(TARGET L053)
-	set(LINKERSCRIPT /STM32_lib/STM32L053/STM32L053)
+	set(LINKERSCRIPT /stm32_lib/STM32L053/STM32L053)
 	set(DEFINITIONS STM32L053)		# uses target_compile_definitions so set #define STM32L053
 	set(ELF ${CMAKE_SOURCE_DIR}/${TARGET}.elf)
 	set(BINARY ${CMAKE_SOURCE_DIR}/${TARGET}.bin)
@@ -52,11 +53,11 @@ if( MCU MATCHES "F303" )
 	#add "library"
 	set(SOURCE_LIST
 		${SOURCE_LIST}
-		"${CMAKE_SOURCE_DIR}/STM32_lib/STM32F303/STM32F303.c"
+		"${CMAKE_SOURCE_DIR}/stm32_lib/STM32F303/STM32F303.c"
 	)
 
 	set(TARGET F303)
-	set(LINKERSCRIPT /STM32_lib/STM32F303/STM32F303)
+	set(LINKERSCRIPT /stm32_lib/STM32F303/STM32F303)
 	set(DEFINITIONS STM32F303)		# uses target_compile_definitions so set #define STM32F303
 	set(ELF ${CMAKE_SOURCE_DIR}/${TARGET}.elf)
 	set(BINARY ${CMAKE_SOURCE_DIR}/${TARGET}.bin)
@@ -68,7 +69,7 @@ add_executable(${TARGET} ${SOURCE_LIST})
 set_target_properties( ${TARGET} PROPERTIES OUTPUT_NAME ${TARGET}.elf )
 target_compile_definitions(${TARGET} PRIVATE ${DEFINITIONS})
 target_compile_options(${TARGET} PRIVATE -mcpu=${PROCESSOR} -mthumb -Wall -Werror -O0 -nostdlib -ffunction-sections -fdata-sections)
-target_link_options(${TARGET} PRIVATE -mcpu=${PROCESSOR} -mthumb -Wall -Werror -O0 -nostdlib -T${CMAKE_SOURCE_DIR}/${LINKERSCRIPT}.ld )
+target_link_options(${TARGET} PRIVATE -mcpu=${PROCESSOR} -mthumb -Wall -Werror -O0 -nostdlib -T${CMAKE_SOURCE_DIR}${LINKERSCRIPT}.ld )
 target_include_directories(${TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 
 #show size of

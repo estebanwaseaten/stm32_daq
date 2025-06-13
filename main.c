@@ -14,15 +14,13 @@ uint32_t *isr_vectors[] =
 	(uint32_t *)Default_Handler,
 };
 
+//add adc interrupt?
+
 
 #define PIN 5
 
 
-void setWord( uint32_t addr, uint32_t word )
-{
-	volatile uint32_t *ptr = (uint32_t*)addr;
-	*ptr = word;
-}
+
 
 //uint32_t someGlobal;
 //direct memory access: *(volatile uint32_t *)(some address) = some value
@@ -38,23 +36,17 @@ int main( void )
 	uint32_t loop_counter = 0x10000000;
 	setWord( 0x20000200, loop_counter++ );
 
+	STMtest();
+
 	while(1)
 	{
 		//set diode:
 		GPIOset( PIN );
-		expensive_wait( 1 );
+		expensive_wait( 2 );
 
 		//unset diode
 		GPIOunset( PIN );
 		expensive_wait( 1 );
-
-		//set diode
-		GPIOset( PIN );
-		expensive_wait( 2 );
-
-		//unset diiode
-		GPIOunset( PIN );
-		expensive_wait( 2 );
 
 		setWord( 0x20000200, loop_counter++ );
 	}
