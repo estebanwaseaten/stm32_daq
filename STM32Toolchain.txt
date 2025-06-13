@@ -1,0 +1,15 @@
+# Toolchain for a Linux system
+set(CMAKE_SYSTEM_NAME Generic)
+set(CMAKE_SYSTEM_PROCESSOR ARM)
+
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)       #needed to work for cross compile - maybe
+
+set(CMAKE_C_COMPILER arm-none-eabi-gcc)     # Compiler-Pfad
+set(CMAKE_ASM_COMPILER ${CMAKE_C_COMPILER}) #?
+set(CMAKE_CXX_COMPILER arm-none-eabi-g++)   # Compiler-Pfad
+
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+# ... weitere Compiler-Parameter ...

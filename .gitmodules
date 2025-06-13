@@ -1,0 +1,3 @@
+[submodule "stm32_lib"]
+	path = stm32_lib
+	url = git@gitlab.com:dweg/stm32_lib.git
