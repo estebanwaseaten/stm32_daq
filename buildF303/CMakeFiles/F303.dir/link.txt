@@ -1,1 +1,0 @@
-/usr/bin/arm-none-eabi-gcc -mcpu=cortex-m4 -mthumb -Wall -Werror -O0 -nostdlib -T/home/wegkamp/development/stm_daq/stm32_lib/STM32F303/STM32F303.ld CMakeFiles/F303.dir/main.c.obj CMakeFiles/F303.dir/stm32_lib/STM32.c.obj CMakeFiles/F303.dir/stm32_lib/STM32F303/STM32F303.c.obj -o /home/wegkamp/development/stm_daq/F303.elf 
