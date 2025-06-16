@@ -21,10 +21,10 @@ int main( void )
 
 	CLOCK_init();
 
-
-
 	GPIO_init();
 	GPIO_changeFunction( PIN, PIN_OUTPUT );
+
+	ADC_enable( 1 );
 
 
 	//test debugging capabilities by just writing to RAM: (seems to work fine)
@@ -37,7 +37,7 @@ int main( void )
 	}*/
 
 
-	STMtest();
+	//STMtest();
 
 	while(1)
 	{
