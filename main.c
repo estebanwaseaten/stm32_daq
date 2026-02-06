@@ -19,12 +19,14 @@ uint32_t *isr_vectors[] =
 int main( void )
 {
 
-	CLOCK_init();
+	CLOCK_init();		//seems to work without this sometimes
 
 	GPIO_init();
 	GPIO_changeFunction( PIN, PIN_OUTPUT );
 
-	ADC_enable( 1 );
+//	ADC_enable( 1 );
+
+
 
 
 	//test debugging capabilities by just writing to RAM: (seems to work fine)
@@ -47,7 +49,7 @@ int main( void )
 
 		//unset diode
 		GPIO_unset( PIN );
-		expensive_wait( 10 );
+		expensive_wait( 9 );
 
 		//setWord( 0x20012000, loop_counter++ );
 	}
