@@ -1,7 +1,8 @@
 #include "main.h"
 
-extern uint32_t _estack;	//defined in linker script
+extern uint32_t _estack;		//defined in linker script
 int main( void );
+void blink( void );
 void Reset_Handler( void );
 void Default_Handler( void );
 void expensive_wait( int multiplier );
@@ -18,29 +19,33 @@ uint32_t *isr_vectors[] =
 
 int main( void )
 {
+	STMtest();
+
+	GPIO_init();
+	GPIO_changeFunction( PIN, PIN_OUTPUT );
+
+	blink();
+
+	return 0;
 
 	CLOCK_init();		//seems to work without this sometimes
 
 	GPIO_init();
 	GPIO_changeFunction( PIN, PIN_OUTPUT );
 
-//	ADC_enable( 1 );
+	ADC_enable( 1 );	//gets stuck
 
-
-
-
-	//test debugging capabilities by just writing to RAM: (seems to work fine)
-//	uint32_t loop_counter = 0x10000000;
-	//setWord( 0x20012000, loop_counter++ );
-
-/*	for (int i = 0; i < 100; i++)
-	{
-		__asm("nop");
-	}*/
-
+	SPI_enable( 1 );
 
 	//STMtest();
 
+	blink();
+
+	return 0;
+}
+
+void blink( void )
+{
 	while(1)
 	{
 		//set diode:
@@ -49,12 +54,8 @@ int main( void )
 
 		//unset diode
 		GPIO_unset( PIN );
-		expensive_wait( 9 );
-
-		//setWord( 0x20012000, loop_counter++ );
+		expensive_wait( 20 );
 	}
-
-	return 0;
 }
 
 void Reset_Handler( void )
@@ -64,7 +65,7 @@ void Reset_Handler( void )
 
 void Default_Handler( void )
 {
-
+	main();
 }
 
 
