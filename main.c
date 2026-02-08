@@ -25,7 +25,7 @@ int main( void )
 
 	CLOCK_init();		//seems to work without this sometimes
 
-	//GPIO_init();
+	GPIO_init();
 
 //	ADC_init();
 //	ADC_enable( 1 );	//gets stuck
