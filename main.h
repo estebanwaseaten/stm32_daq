@@ -1,11 +1,9 @@
 #include <stdint.h>
 #include "stm32_lib/STM32.h"
 
+//int main( void );
+void blink_forever( void );
+void blink( void );
+void expensive_wait( int multiplier );
 
-/*#ifdef STM32L053
- 	#include "STM32L053.h"
-#endif
-
-#ifdef STM32F303
-	#include "STM32F303.h"
-#endif*/
+#define PIN 5

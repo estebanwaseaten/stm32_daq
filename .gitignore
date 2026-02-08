@@ -6,3 +6,4 @@
 *.order
 build*/
 *.elf
+*.bin
