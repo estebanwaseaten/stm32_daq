@@ -32,6 +32,10 @@ int main( void )
 
 	SPI_init();
 	SPI_enable( 1 );
+
+
+	//main_loop();
+
 	SPI_test();
 
 
@@ -39,6 +43,29 @@ int main( void )
 	//blink_forever();
 
 	return 0;
+}
+
+/*		//16 bit transfer would be good... 10bits for data and 6 for
+*		constantly listen to input
+* 		when asked to measure:
+*			- insert a "wait!" response into SPI buffer
+*			- measure
+*
+*		when done insert "data available" into SPI buffer
+*/
+void main_loop( void )
+{
+	int running = 1;
+	while( running )
+	{
+		//1. fetch SPI input command
+
+
+		//2. do something
+
+
+		//3. provide reply
+	}
 }
 
 void blink_forever( void )
