@@ -1,18 +1,5 @@
 #include "main.h"
 
-extern uint32_t _estack;		//defined in linker script
-
-void Reset_Handler( void );
-void Default_Handler( void );
-
-__attribute__((section(".isr_vector")))
-uint32_t *isr_vectors[] =
-{
-	(uint32_t *)&_estack,
-	(uint32_t *)Reset_Handler,
-	(uint32_t *)Default_Handler,	//shall we add SPI interrup handler?
-};
-
 
 int main( void )
 {
@@ -20,6 +7,7 @@ int main( void )
     setWord( 0x20009004, 0 );
     setWord( 0x20009008, 0 );
     setWord( 0x2000900C, 0 );
+	setWord( 0x20009010, 0 );
 
 	//STMtest();
 
@@ -32,16 +20,12 @@ int main( void )
 
 	SPI_init();
 	SPI_enable( 1 );
-	SPI_test();
+//	SPI_test();
 
-	//main_loop();
+	main_loop();
 
-
-
-
-	//GPIO_changeFunction( PIN, PIN_OUTPUT );
-
-	//blink_forever();
+//	GPIO_changeFunction( PIN, PIN_OUTPUT );	//messes with the SPI
+//	blink_forever();
 
 	return 0;
 }
@@ -59,11 +43,11 @@ void main_loop( void )
 	int running = 1;
 	while( running )
 	{
+		//pre-load wait command
 		//1. fetch SPI input command
-
+		//interrupt does this now
 
 		//2. do something
-
 
 		//3. provide reply
 	}
@@ -96,15 +80,7 @@ void blink( void )
 	expensive_wait( 2 );
 }
 
-void Reset_Handler( void )
-{
-	main();
-}
 
-void Default_Handler( void )
-{
-	main();
-}
 
 
 void expensive_wait( int multiplier )
