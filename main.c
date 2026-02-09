@@ -32,14 +32,15 @@ int main( void )
 
 	SPI_init();
 	SPI_enable( 1 );
-
+	SPI_test();
 
 	//main_loop();
 
-	SPI_test();
+
 
 
 	//GPIO_changeFunction( PIN, PIN_OUTPUT );
+
 	//blink_forever();
 
 	return 0;
@@ -79,6 +80,9 @@ void blink_forever( void )
 
 void blink( void )
 {
+	uint32_t counter = getWord( 0x20009008 ) + 1;
+	setWord( 0x20009008, counter );
+
 	GPIO_set( PIN );
 	expensive_wait( 1 );
 
