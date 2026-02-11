@@ -12,7 +12,7 @@ int main( void )
     setWord( 0x20009004, 0 );
     setWord( 0x20009008, 0 );
     setWord( 0x2000900C, 0 );
-	setWord( 0x20009010, 0 );
+	setWord( 0x20009010, 1 );
 
 	dataReady = 0;
 	dataRequested = 0;
@@ -29,8 +29,8 @@ int main( void )
 
 	setHandler_SPI1( mySPI1Handler );
 
-	SPI_init(1);
-	SPI_enable(1);
+	SPI_init( 1 );
+	SPI_enable( 1, SPI_16BITSPERWORD );
 	SPI_enable_interrupt( 1, SPI_RXNEI );
 //	SPI_test();
 
@@ -45,8 +45,9 @@ int main( void )
 void mySPI1Handler( void )
 {
 	//check what bit is set...
-	uint8_t rec = SPI_receive();
-	setWord( 0x20009000, (uint32_t)rec );
+	uint16_t received = SPI_receive();
+	setWord( 0x20009000, (uint32_t)received );
+	setWord( 0x20009004, 0xF0 );
 
 	//should provide with data maybe having interrupts here is unnecessary...
 }
