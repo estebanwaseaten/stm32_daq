@@ -1,5 +1,10 @@
 #include "main.h"
 
+void mySPI1Handler( void );
+
+uint8_t dataReady = 0;
+uint8_t dataRequested = 0;
+uint8_t dataSent = 0;
 
 int main( void )
 {
@@ -8,6 +13,10 @@ int main( void )
     setWord( 0x20009008, 0 );
     setWord( 0x2000900C, 0 );
 	setWord( 0x20009010, 0 );
+
+	dataReady = 0;
+	dataRequested = 0;
+	dataSent = 0;
 
 	//STMtest();
 
@@ -18,8 +27,11 @@ int main( void )
 //	ADC_init();
 //	ADC_enable( 1 );	//gets stuck
 
-	SPI_init();
-	SPI_enable( 1 );
+	setHandler_SPI1( mySPI1Handler );
+
+	SPI_init(1);
+	SPI_enable(1);
+	SPI_enable_interrupt( 1, SPI_RXNEI );
 //	SPI_test();
 
 	main_loop();
@@ -30,6 +42,15 @@ int main( void )
 	return 0;
 }
 
+void mySPI1Handler( void )
+{
+	//check what bit is set...
+	uint8_t rec = SPI_receive();
+	setWord( 0x20009000, (uint32_t)rec );
+
+	//should provide with data maybe having interrupts here is unnecessary...
+}
+
 /*		//16 bit transfer would be good... 10bits for data and 6 for
 *		constantly listen to input
 * 		when asked to measure:
@@ -38,11 +59,15 @@ int main( void )
 *
 *		when done insert "data available" into SPI buffer
 */
+
+
 void main_loop( void )
 {
 	int running = 1;
 	while( running )
 	{
+		//wait for a command
+		//will not reply durcing measurment.. or place wait command via DMA
 		//pre-load wait command
 		//1. fetch SPI input command
 		//interrupt does this now
