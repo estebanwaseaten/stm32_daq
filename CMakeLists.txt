@@ -51,10 +51,14 @@ if( MCU MATCHES "F303" )
 	#could also refer to various linker scripts here...
 
 	#add "library"
+
+	file(GLOB F303_SOURCE_LIST CONFIGURE_DEPENDS
+    	"${CMAKE_SOURCE_DIR}/stm32_lib/STM32F303/*.c"	#needed to  expand wildcard
+	)
+
 	set(SOURCE_LIST
 		${SOURCE_LIST}
-		"${CMAKE_SOURCE_DIR}/stm32_lib/STM32F303/STM32F303.c"
-		"${CMAKE_SOURCE_DIR}/stm32_lib/STM32F303/STM32F303_vectorTable.c"
+		${F303_SOURCE_LIST}
 	)
 
 	set(TARGET F303)
