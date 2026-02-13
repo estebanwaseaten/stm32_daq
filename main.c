@@ -51,24 +51,22 @@ static inline uint16_t SPIDATAPACKET( uint16_t data )
 }
 
 uint16_t gLastCmd;
-uint16_t gNextResponse;
-
 uint32_t gState;
-uint32_t gErrState;
-uint8_t gTestData;
-uint8_t gFlipper;
+//uint32_t gErrState;
+
 
 uint32_t gDataReady;
 uint32_t gDataIndex;
 uint32_t gTransferLength;
+
+uint32_t gDatapointsAcquired;
+
 uint32_t gActiveChannel;
 
 int main( void )
 {
 	gState = STATE_STARTUP;
-	gErrState = ERRSTATE_NOERR;
-	gTestData = 0;
-	gFlipper = 0;
+	//gErrState = ERRSTATE_NOERR;
 	gLastCmd = 0;
 	gActiveChannel = 0;
 
@@ -89,31 +87,26 @@ int main( void )
 
 	GPIO_init();
 
-//	ADC_init();
-//	ADC_enable( 1 );	//gets stuck
+	ADC_init();
+	ADC_enable( 1 );	//gets stuck
+
+	setWord( 0x20009000, ADC_read(1));
 
 	gDataIndex = 0;
 	gState = STATE_IDLE;
 	gLastCmd = 0;
-	gNextResponse = 0;
 	gDataReady = 0;
-
-	setWord( 0x20009030, (uint32_t)&gState );
+	gDatapointsAcquired = 0;
 
 	setHandler_SPI1( mySPI1Handler );
+
 	SPI_init( 1 );
 	SPI_enable( 1, SPI_16BITSPERWORD );
-	//SPI_send( SPIPACKET(CMD_ACK, DATA_NULL ));
 	SPI_enable_interrupt( 1, SPI_RXNEI );
-//	SPI_test();
 
-//	SPI_send( SPIPACKET(RESP_ACK, DATA_NULL ));	//this is sent when the first cmd is received
 
 
 	main_loop();
-
-//	GPIO_changeFunction( PIN, PIN_OUTPUT );	//messes with the SPI
-//	blink_forever();
 
 	return 0;
 }
@@ -191,7 +184,7 @@ void main_loop( void )
 					//1. check if data is ready
 					if( gDataReady == 1 )
 					{
-						gTransferLength = 1000;
+						gTransferLength = gDatapointsAcquired;
 						setWord( 0x20000000, gTransferLength );		//set length of remaing transfer into first bit.
 						gState = STATE_FAST_TRANSFER;
 					}
@@ -200,6 +193,7 @@ void main_loop( void )
 				case CMD_ACQU:
 					//prep data acqu
 					gDataReady = 0;
+					gDatapointsAcquired = 0;
 					gState = STATE_ACQUIRE_DATA;
 					//do the actual acquisition
 					break;
@@ -211,6 +205,12 @@ void main_loop( void )
 		else if( gState == STATE_ACQUIRE_DATA )
 		{
 			// acquire data and then... if done:
+			while( gDatapointsAcquired < 100 )
+			{
+				setWord( (0x20000004 + 4*gDatapointsAcquired), ADC_read( 1 ) );
+
+				gDatapointsAcquired++;
+			}
 			gDataReady = 1;
 			gState = STATE_IDLE;
 		}
