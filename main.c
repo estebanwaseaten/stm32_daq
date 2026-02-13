@@ -90,7 +90,7 @@ int main( void )
 	ADC_init();
 	ADC_enable( 1 );
 
-	setWord( 0x20009000, ADC_read( 1 ) );
+	//setWord( 0x20009000, ADC_read( 1 ) );
 
 	gDataIndex = 0;
 	gState = STATE_IDLE;
@@ -204,13 +204,13 @@ void main_loop( void )
 		}
 		else if( gState == STATE_ACQUIRE_DATA )
 		{
-			// acquire data and then... if done:
+			// acquire data --> this could be done via DMA
 			while( gDatapointsAcquired < 100 )
 			{
-				setWord( (0x20000004 + 4*gDatapointsAcquired), ADC_read( 1 ) );
-
+				setWord( (0x20000004 + 4*gDatapointsAcquired), ADC_read_single( 1 ) );
 				gDatapointsAcquired++;
 			}
+			// then set Data is ready and go back to idle. --> this could be done in some interrupt
 			gDataReady = 1;
 			gState = STATE_IDLE;
 		}
