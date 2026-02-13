@@ -88,9 +88,9 @@ int main( void )
 	GPIO_init();
 
 	ADC_init();
-	ADC_enable( 1 );	//gets stuck
+	ADC_enable( 1 );
 
-	setWord( 0x20009000, ADC_read(1));
+	setWord( 0x20009000, ADC_read( 1 ) );
 
 	gDataIndex = 0;
 	gState = STATE_IDLE;
