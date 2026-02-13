@@ -2,37 +2,113 @@
 
 void mySPI1Handler( void );
 
-uint8_t dataReady = 0;
-uint8_t dataRequested = 0;
-uint8_t dataSent = 0;
+enum main_states
+{
+		STATE_STARTUP,
+		STATE_IDLE,
+		STATE_ABORT,
+		STATE_CMDRECEIVED,
+		STATE_REPLYREADY,
+		STATE_FAST_TRANSFER,
+		STATE_ACQUIRE_DATA
+};
+
+enum error_states
+{
+		ERRSTATE_NOERR,
+		ERRSTATE_ERR
+};
+
+#define DATA_NULL 0x0
+//send commands (i.e. replies): when reply starts with 1 --> REPLY + DATA, if most signifcant bit is 0 --> all remaining bits are data
+#define RESP_WAIT 0xA3		// 10100011
+#define RESP_ERR 0xAC		// 10101100
+#define RESP_ACK 0xA6		// 10100110
+#define RESP_DONE 0xA7		// 10100111
+
+//commands from pi
+#define CMD_ECHO  0x53		// 01010011		for debugging
+#define CMD_ABORT 0x5F		// 01011111
+#define CMD_QUERY 0x50 		// 01010000
+
+//per channel: last 2 bits
+//settings
+#define CMD_SETTB 0x71		// 01110001		settings, set timebase
+
+//data acquisition:
+#define CMD_DRDY 0x60		// 01100000	-- ask if data is ready
+#define CMD_ACQU 0x61 		// 01100001 -- tell to acquire data
+#define CMD_FFETCH 0x62		// 01100010 -- fetch data
+
+static inline uint16_t SPIPACKET(uint8_t cmd, uint8_t data)
+{
+    return ((uint16_t)cmd << 8) | (uint16_t)data;
+}
+
+static inline uint16_t SPIDATAPACKET( uint16_t data )
+{
+    return data & 0x7FFF;
+}
+
+uint16_t gLastCmd;
+uint16_t gNextResponse;
+
+uint32_t gState;
+uint32_t gErrState;
+uint8_t gTestData;
+uint8_t gFlipper;
+
+uint32_t gDataReady;
+uint32_t gDataIndex;
+uint32_t gTransferLength;
+uint32_t gActiveChannel;
 
 int main( void )
 {
-	setWord( 0x20009000, 0 );
-    setWord( 0x20009004, 0 );
-    setWord( 0x20009008, 0 );
-    setWord( 0x2000900C, 0 );
-	setWord( 0x20009010, 1 );
+	gState = STATE_STARTUP;
+	gErrState = ERRSTATE_NOERR;
+	gTestData = 0;
+	gFlipper = 0;
+	gLastCmd = 0;
+	gActiveChannel = 0;
 
-	dataReady = 0;
-	dataRequested = 0;
-	dataSent = 0;
+	for( int i = 0; i < 16; i++ )
+	{
+		setWord( 0x20009000 + i*4, 0 );
+	}
+	for( int i = 0; i < 1024; i++ )
+	{
+		setWord( 0x20000004 + i*4, i+1 );
+	}
 
 	//STMtest();
 
-	CLOCK_init();		//seems to work without this sometimes
+	//CLOCK_init();		//seems to work without this sometimes
+	CLOCK_init( SYSCLK_PLL );		//could also use HSI, but probably more stable as with HSE
+	//CLOCK_start_PLL( SYSCLK_HSE );	//needed for fast ADC already started when using PLL
 
 	GPIO_init();
 
 //	ADC_init();
 //	ADC_enable( 1 );	//gets stuck
 
-	setHandler_SPI1( mySPI1Handler );
+	gDataIndex = 0;
+	gState = STATE_IDLE;
+	gLastCmd = 0;
+	gNextResponse = 0;
+	gDataReady = 0;
 
+	setWord( 0x20009030, (uint32_t)&gState );
+
+	setHandler_SPI1( mySPI1Handler );
 	SPI_init( 1 );
 	SPI_enable( 1, SPI_16BITSPERWORD );
+	//SPI_send( SPIPACKET(CMD_ACK, DATA_NULL ));
 	SPI_enable_interrupt( 1, SPI_RXNEI );
 //	SPI_test();
+
+//	SPI_send( SPIPACKET(RESP_ACK, DATA_NULL ));	//this is sent when the first cmd is received
+
 
 	main_loop();
 
@@ -42,40 +118,102 @@ int main( void )
 	return 0;
 }
 
-void mySPI1Handler( void )
+//using handler works ok. maybe to improve speed one could employ DMA...
+void mySPI1Handler( void )		// THE HANDLER has to be executed quickly: receive and send depending on current state
 {
-	//check what bit is set...
-	uint16_t received = SPI_receive();
-	setWord( 0x20009000, (uint32_t)received );
-	setWord( 0x20009004, 0xF0 );
+	//maybe check what interrup exactly this was
+	uint16_t received = SPI_receive();	// should we check for -1 (probably not necessary)
+	uint8_t *receivedCMD = (uint8_t*)&received + 1;
 
-	//should provide with data maybe having interrupts here is unnecessary...
+	if( receivedCMD[0] == CMD_ABORT )	//ignores current state
+	{
+		gState = STATE_ABORT;			//let
+		SPI_send( SPIPACKET( RESP_ACK, DATA_NULL )  );
+		return;
+	}
+
+	if( gState == STATE_FAST_TRANSFER )	//just send data until done --> potentially "very fast" 30k transfers per second, when STM32 is running at 72kHz
+	{
+		SPI_send( getWord( 0x20000000 + gDataIndex*4) );
+		gDataIndex++;
+		if( gDataIndex > gTransferLength )
+		{
+			gState = STATE_IDLE;
+			gDataIndex = 0;
+			gDataReady = 0;		//reset here?
+		}
+		return;
+	}
+	else if( gState == STATE_IDLE )
+	{
+		//should we decide here if that request is fine?
+		//abort & very simple cases:
+		if( (receivedCMD[0] == CMD_FFETCH) && (gDataReady == 0) )
+		{
+			SPI_send( SPIPACKET( RESP_ERR, DATA_NULL )  );
+			return;
+		}
+
+		if( receivedCMD[0] == CMD_DRDY )
+		{
+			SPI_send( SPIPACKET( RESP_ACK, gDataReady ) );
+			return;
+		}
+
+		gLastCmd = received;
+		gState = STATE_CMDRECEIVED;
+
+		SPI_send( SPIPACKET( RESP_ACK, DATA_NULL )  );		//if it is asked for data we should check data ready here??
+		return;
+	}
+	else
+	{
+		SPI_send( SPIPACKET( RESP_WAIT, DATA_NULL )  );
+	}
 }
-
-/*		//16 bit transfer would be good... 10bits for data and 6 for
-*		constantly listen to input
-* 		when asked to measure:
-*			- insert a "wait!" response into SPI buffer
-*			- measure
-*
-*		when done insert "data available" into SPI buffer
-*/
-
 
 void main_loop( void )
 {
 	int running = 1;
 	while( running )
 	{
-		//wait for a command
-		//will not reply durcing measurment.. or place wait command via DMA
-		//pre-load wait command
-		//1. fetch SPI input command
-		//interrupt does this now
+		if( gState == STATE_ABORT )
+		{
 
-		//2. do something
+		}
+		else if( gState == STATE_CMDRECEIVED )
+		{
+			uint8_t cmd = gLastCmd >> 8;
+			//uint8_t data = gLastCmd & 0xFF;
+			switch( cmd )	//only cmd
+			{
+				case CMD_FFETCH:		//
+					//1. check if data is ready
+					if( gDataReady == 1 )
+					{
+						gTransferLength = 1000;
+						setWord( 0x20000000, gTransferLength );		//set length of remaing transfer into first bit.
+						gState = STATE_FAST_TRANSFER;
+					}
 
-		//3. provide reply
+					break;
+				case CMD_ACQU:
+					//prep data acqu
+					gDataReady = 0;
+					gState = STATE_ACQUIRE_DATA;
+					//do the actual acquisition
+					break;
+				default:
+					gState = STATE_IDLE;
+					break;
+			}
+		}
+		else if( gState == STATE_ACQUIRE_DATA )
+		{
+			// acquire data and then... if done:
+			gDataReady = 1;
+			gState = STATE_IDLE;
+		}
 	}
 }
 
