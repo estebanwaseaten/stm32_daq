@@ -1,6 +1,8 @@
 #include "main.h"
 
+void mySysTickHandler( void );
 void mySPI1Handler( void );
+void myTIM2Handler( void );
 
 enum main_states
 {
@@ -54,7 +56,6 @@ uint16_t gLastCmd;
 uint32_t gState;
 //uint32_t gErrState;
 
-
 uint32_t gDataReady;
 uint32_t gDataIndex;
 uint32_t gTransferLength;
@@ -63,12 +64,19 @@ uint32_t gDatapointsAcquired;
 
 uint32_t gActiveChannel;
 
+uint32_t gTickCounter_ms;
+uint32_t gTim2Counter;
+
 int main( void )
 {
+	//setVTOR();		//maybe this was missing?
+
 	gState = STATE_STARTUP;
 	//gErrState = ERRSTATE_NOERR;
 	gLastCmd = 0;
 	gActiveChannel = 0;
+	gTickCounter_ms = 0;
+	gTim2Counter = 0;
 
 	for( int i = 0; i < 16; i++ )
 	{
@@ -79,18 +87,37 @@ int main( void )
 		setWord( 0x20000004 + i*4, i+1 );
 	}
 
+
 	//STMtest();
 
 	//CLOCK_init();		//seems to work without this sometimes
 	CLOCK_init( SYSCLK_PLL );		//could also use HSI, but probably more stable as with HSE
 	//CLOCK_start_PLL( SYSCLK_HSE );	//needed for fast ADC already started when using PLL
 
-	GPIO_init();
 
+	//uint32_t clkSpd = CLOCK_get_sysClk();		//this uint32_t seems to mess up the SPI communication... SOMETIMES
+	//setWord( 0x20009010, clkSpd );
+
+
+	//timer shall fire 1000 times in a row to trigger 1000 requests
+	//TIMER_init();
+	//TIMER_enable( 2, 72000000/1000 );
+
+	GPIO_init();
 	ADC_init();
 	ADC_enable( 1 );
 
-	//setWord( 0x20009000, ADC_read( 1 ) );
+	setHandler_SPI1( mySPI1Handler );		//this seems to work, but somehow the interrupt never gets triggered...
+
+//	setHandler_TIM2( myTIM2Handler );
+//	setHandler_SysTick( mySysTickHandler );		// called every ms
+//	CLOCK_enable_sysTick( 72000000 );			//enabled --> mySysTickHandler() gets called every ms
+
+	SPI_init( 1 );
+	SPI_enable( 1, SPI_16BITSPERWORD );
+	SPI_enable_interrupt( 1, SPI_RXNEI );
+
+	setWord( 0x20009014, 0xF0F0F0F0 );
 
 	gDataIndex = 0;
 	gState = STATE_IDLE;
@@ -98,23 +125,28 @@ int main( void )
 	gDataReady = 0;
 	gDatapointsAcquired = 0;
 
-	setHandler_SPI1( mySPI1Handler );
-
-	SPI_init( 1 );
-	SPI_enable( 1, SPI_16BITSPERWORD );
-	SPI_enable_interrupt( 1, SPI_RXNEI );
-
-
-
 	main_loop();
 
 	return 0;
+}
+
+void myTIM2Handler( void )
+{
+	gTim2Counter++;
+	//setWord( 0x20009004, gTim2Counter );	;
+}
+
+void mySysTickHandler( void )	//ticks every ms
+{
+	gTickCounter_ms++;
+	//setWord( 0x20009000, gTickCounter_ms );		//just to check if works
 }
 
 //using handler works ok. maybe to improve speed one could employ DMA...
 void mySPI1Handler( void )		// THE HANDLER has to be executed quickly: receive and send depending on current state
 {
 	//maybe check what interrup exactly this was
+	setWord( 0x2000901C, getWord( 0x2000901C ) + 1);
 	uint16_t received = SPI_receive();	// should we check for -1 (probably not necessary)
 	uint8_t *receivedCMD = (uint8_t*)&received + 1;
 
@@ -170,6 +202,7 @@ void main_loop( void )
 	int running = 1;
 	while( running )
 	{
+		setWord( 0x2000900C, getWord(0x2000900C) + 1 );
 		if( gState == STATE_ABORT )
 		{
 
