@@ -35,7 +35,10 @@ enum error_states
 
 //per channel: last 2 bits
 //settings
-#define CMD_SETTB 0x71		// 01110001		settings, set timebase
+#define CMD_SET_TB 		0x71	// 01110001		settings, set timebase	--> full duration
+#define CMD_SET_TRIG 	0x72	// 01110010		settings, set trigger
+#define CMD_SET_MODE 	0x73	// 01110011		settings set trigger mode (circular buffer or software trigger)
+
 
 //data acquisition:
 #define CMD_DRDY 0x60		// 01100000	-- ask if data is ready
