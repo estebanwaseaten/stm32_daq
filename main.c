@@ -115,11 +115,13 @@ int main( void )
 	SPI_enable( 1, SPI_16BITSPERWORD );
 	SPI_enable_interrupt( 1, SPI_RXNEI );
 
-	SPI_send( SPIPACKET( RESP_ACK, DATA_NULL )  );
+	SPI_send( SPIPACKET( RESP_ACK, DATA_NULL )  );	//load first acknowledge response (could do this within enable)
+
+	DMA_init();	//inits both DMAs
 
 	//timer shall fire 1000 times in a row to trigger 1000 requests
 	TIMER_init();
-	TIMER_enable( 2, clkSpd/1000 );
+	TIMER_enable( 2, clkSpd/1000, true );
 	setWord( 0x20009014, 0xF0F0F0F0 );
 
 	gDataIndex = 0;
