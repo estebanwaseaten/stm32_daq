@@ -81,7 +81,7 @@ int main( void )
 	gLastCmd = 0;
 	gActiveChannel = 0;
 	gTickCounter_ms = 0;
-	gTim2Counter = 0;
+	gTim2Counter = 1;
 
 	//clear normal SRAM for scope data
 	for( int i = 0; i < 16; i++ )
@@ -96,15 +96,15 @@ int main( void )
 	//setup handlers first
 	setHandler_SPI1( mySPI1Handler );		//this seems to work, but somehow the interrupt never gets triggered...
 	setHandler_TIM2( myTIM2Handler );
-	setHandler_SysTick( mySysTickHandler );		// called every ms
+//	setHandler_SysTick( mySysTickHandler );		// called every ms
 
 
 
 	CLOCK_init( SYSCLK_PLL );		//could also use HSI, but probably more stable as with HSE
 	//CLOCK_start_PLL( SYSCLK_HSE );	//needed for fast ADC already started when using PLL
 
-	uint32_t clkSpd = CLOCK_get_sysClk();		//this uint32_t seems to mess up the SPI communication... SOMETIMES
-	CLOCK_enable_sysTick( clkSpd );			//enabled --> mySysTickHandler() gets called every ms
+//	uint32_t clkSpd = CLOCK_get_sysClk();		//this uint32_t seems to mess up the SPI communication... SOMETIMES
+//	CLOCK_enable_sysTick( clkSpd );			//enabled --> mySysTickHandler() gets called every ms
 
 
 	GPIO_init();
@@ -120,11 +120,12 @@ int main( void )
 	DMA_init();	//inits both DMAs
 
 	//timer shall fire 1000 times in a row to trigger 1000 requests
-	TIMER_init();
-	TIMER_enable( 2, clkSpd/1000, true );
-	expensive_wait( 1 );
-	TIMER_start( 2 );
-	setWord( 0x20009014, 0xF0F0F0F0 );
+	TIMER_init(); //TEST FUNCTION FOR NOW
+	//TIMER_enable( 2, clkSpd/1000, false );
+	//expensive_wait( 1 );
+	//TIMER_enable_interrupt( 2 );
+	//TIMER_start( 2 );
+	setWord( 0x20009014, 0xF0F0F0FF );
 
 	gDataIndex = 0;
 	gState = STATE_IDLE;
@@ -139,8 +140,10 @@ int main( void )
 
 void myTIM2Handler( void )		//not ticking yet
 {
+	TIMER_clear_interrupt(2);
+
 	gTim2Counter++;
-	setWord( 0x20009004, gTim2Counter );	;
+	setWord( 0x20009004, gTim2Counter );
 }
 
 void mySysTickHandler( void )	//ticks every ms
@@ -210,6 +213,7 @@ void main_loop( void )
 	while( running )
 	{
 		setWord( 0x2000900C, getWord(0x2000900C) + 1 );
+		setWord( 0x20009008, TIMER_getcount(2) );
 		if( gState == STATE_ABORT )
 		{
 
