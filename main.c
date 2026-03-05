@@ -120,7 +120,7 @@ int main( void )
 	DMA_init();	//inits both DMAs
 
 	//timer shall fire 1000 times in a row to trigger 1000 requests
-	TIMER_init(); //TEST FUNCTION FOR NOW
+//	TIMER_init(); //TEST FUNCTION FOR NOW
 	//TIMER_enable( 2, clkSpd/1000, false );
 	//expensive_wait( 1 );
 	//TIMER_enable_interrupt( 2 );
@@ -136,6 +136,11 @@ int main( void )
 	main_loop();
 
 	return 0;
+}
+
+void myDMA1_transfer_complete( void )
+{
+	
 }
 
 void myTIM2Handler( void )		//not ticking yet
@@ -158,6 +163,7 @@ void mySPI1Handler( void )		// THE HANDLER has to be executed quickly: receive a
 	//maybe check what interrup exactly this was
 	setWord( 0x2000901C, getWord( 0x2000901C ) + 1);	//to check if its working
 	uint16_t received = SPI_receive();	// should we check for -1 (probably not necessary)
+	setWord( 0x20009018, received );
 	uint8_t *receivedCMD = (uint8_t*)&received + 1;
 
 	if( receivedCMD[0] == CMD_ABORT )	//ignores current state
