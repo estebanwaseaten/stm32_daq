@@ -73,7 +73,7 @@ add_executable(${TARGET} ${SOURCE_LIST})
 
 set_target_properties( ${TARGET} PROPERTIES OUTPUT_NAME ${TARGET}.elf )
 target_compile_definitions(${TARGET} PRIVATE ${DEFINITIONS})
-target_compile_options(${TARGET} PRIVATE -mcpu=${PROCESSOR} -mthumb -Wall -Werror -O0 -nostdlib -ffunction-sections -fdata-sections)
+target_compile_options(${TARGET} PRIVATE -mcpu=${PROCESSOR} -mthumb -Wall -Werror -O0 -nostdlib -ffunction-sections -fdata-sections -ffreestanding)
 target_link_options(${TARGET} PRIVATE -mcpu=${PROCESSOR} -mthumb -Wall -Werror -O0 -nostdlib -T${CMAKE_SOURCE_DIR}${LINKERSCRIPT}.ld )
 target_include_directories(${TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 

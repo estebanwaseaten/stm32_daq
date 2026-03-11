@@ -4,6 +4,13 @@ void mySysTickHandler( void );
 void mySPI1Handler( void );
 void myTIM2Handler( void );
 
+void myDMA1_transfer_complete_SWtrig( void );
+void myDMA1_transfer_complete_HWtrig( void );
+void myADC_watchdog_handler( void );
+
+void updateHandlers( void );
+
+
 enum main_states
 {
 		STATE_STARTUP,
@@ -19,6 +26,15 @@ enum error_states
 {
 		ERRSTATE_NOERR,
 		ERRSTATE_ERR
+};
+
+enum trigger_modes
+{
+	TRIG_SOFTWARE,
+	TRIG_CH1,
+	TRIG_CH2,
+	TRIG_CH3,
+	TRIG_CH4
 };
 
 #define DATA_NULL 0x0
@@ -57,7 +73,7 @@ static inline uint16_t SPIDATAPACKET( uint16_t data )
 
 uint16_t gLastCmd;
 uint32_t gState;
-//uint32_t gErrState;
+
 
 uint32_t gDataReady;
 uint32_t gDataIndex;
@@ -65,10 +81,19 @@ uint32_t gTransferLength;
 
 uint32_t gDatapointsAcquired;
 
-uint32_t gActiveChannel;
-
 uint32_t gTickCounter_ms;
 uint32_t gTim2Counter;
+
+uint32_t gTriggerMode;		//software or hardware (channel, v-level, t-position)
+uint32_t gTriggerLevel;
+uint32_t gTriggerPos;
+
+
+//settings that can be changed via SPI and define the DAQ
+uint32_t g_settings_datapoints;			// fixed at 1024 (max)
+uint32_t g_settings_adc_time;			// 000 = 1.5 cycles to 111 = 601,5 cycles per ADC - must be set in ADC SMPR1 register
+uint32_t g_settings_acquisition_speed;	// how many datapoints per second (defines timer settings)
+
 
 //volatile uint32_t gSomething = 9;			//this would go into the data section... does it need to be copied in reset handler? it does not seem so...
 
@@ -79,9 +104,19 @@ int main( void )
 	gState = STATE_STARTUP;
 	//gErrState = ERRSTATE_NOERR;
 	gLastCmd = 0;
-	gActiveChannel = 0;
 	gTickCounter_ms = 0;
 	gTim2Counter = 1;
+
+	gTransferLength = 0;
+
+	g_settings_datapoints = 128;
+	g_settings_adc_time = 0x4; // 19.5 cycles
+
+	//these need to be changeable by commands
+	gTriggerMode = TRIG_SOFTWARE;
+	gTriggerLevel = 512;
+	gTriggerPos = 64;
+
 
 	//clear normal SRAM for scope data
 	for( int i = 0; i < 16; i++ )
@@ -90,43 +125,33 @@ int main( void )
 	}
 	for( int i = 0; i < 1024; i++ )
 	{
-		setWord( 0x20000004 + i*4, i+1 );
+		setWord( 0x20000004 + i*4, 0 );
 	}
 
-	//setup handlers first
+	//setup interrupt handlers:
 	setHandler_SPI1( mySPI1Handler );		//this seems to work, but somehow the interrupt never gets triggered...
-	setHandler_TIM2( myTIM2Handler );
-//	setHandler_SysTick( mySysTickHandler );		// called every ms
-
+	updateHandlers();
+	//setHandler_TIM2( myTIM2Handler );		//just for testing
 
 
 	CLOCK_init( SYSCLK_PLL );		//could also use HSI, but probably more stable as with HSE
+	//CLOCK_init( SYSCLK_HSE );
 	//CLOCK_start_PLL( SYSCLK_HSE );	//needed for fast ADC already started when using PLL
 
-//	uint32_t clkSpd = CLOCK_get_sysClk();		//this uint32_t seems to mess up the SPI communication... SOMETIMES
-//	CLOCK_enable_sysTick( clkSpd );			//enabled --> mySysTickHandler() gets called every ms
+	uint32_t clkSpd = CLOCK_get_sysClk();		//this uint32_t seems to mess up the SPI communication... SOMETIMES
+	SYSTICK_enable( clkSpd );				//enabled --> mySysTickHandler() gets called every ms
 
 
-	GPIO_init();
-	ADC_init();
-	ADC_enable( 1 );
+	GPIO_init();	//enables clocks
 
-	SPI_init( 1 );
+	SPI_init( 1 );	//enables clocks
 	SPI_enable( 1, SPI_16BITSPERWORD );
 	SPI_enable_interrupt( 1, SPI_RXNEI );
-
 	SPI_send( SPIPACKET( RESP_ACK, DATA_NULL )  );	//load first acknowledge response (could do this within enable)
 
-	DMA_init();	//inits both DMAs
+	DAQ1_setup();
 
-	//timer shall fire 1000 times in a row to trigger 1000 requests
-//	TIMER_init(); //TEST FUNCTION FOR NOW
-	//TIMER_enable( 2, clkSpd/1000, false );
-	//expensive_wait( 1 );
-	//TIMER_enable_interrupt( 2 );
-	//TIMER_start( 2 );
 	setWord( 0x20009014, 0xF0F0F0FF );
-
 	gDataIndex = 0;
 	gState = STATE_IDLE;
 	gLastCmd = 0;
@@ -138,30 +163,88 @@ int main( void )
 	return 0;
 }
 
-void myDMA1_transfer_complete( void )
+//DAQ stop:
+// 1. stop timer
+// 2. disarm ADC
+// 3. clear DMA interrupt
+
+//DAQ start:
+// 1. reset DMA
+// 2. arm ADC
+// 3. start timer
+
+
+// in case the trigger mode changes the handlers are updated:
+void updateHandlers( void )
 {
-	
+	if( gTriggerMode == TRIG_SOFTWARE )
+	{
+		setHandler_DMA( 1, 1, myDMA1_transfer_complete_SWtrig );
+	}
+	else
+	{
+		setHandler_DMA( 1, 1, myDMA1_transfer_complete_HWtrig );
+		setHandler_ADC( 1, myADC_watchdog_handler );
+		setHandler_ADC( 2, myADC_watchdog_handler );
+		setHandler_ADC( 3, myADC_watchdog_handler );
+		setHandler_ADC( 4, myADC_watchdog_handler );
+	}
 }
+
+void updateConfig( void )
+{
+
+}
+
+// for software trigger mode: called when DMA sequence is done! (do we need a second one for four channels?)
+void myDMA1_transfer_complete_SWtrig( void )
+{
+	// stop the timer!
+	//Immediately stop TIM2 (CEN=0) or clear EXTEN=0.
+	setWord( 0x20009034, getWord( 0x20009034 ) + 1 );
+	setWord( 0x20009030, 0xF0FF00F0 );
+
+	//clear interrupt
+	DAQ1_stop();
+	DMA_clear_interrupts( 1 );
+
+	gDatapointsAcquired = 64;
+	gDataReady = 1;
+	gState = STATE_IDLE;
+}
+
+void myDMA1_transfer_complete_HWtrig( void )
+{
+
+}
+
+
+
+
+// for hardware trigger (watchdog) mode: called whenever a value is crossed... ---> should still continue for 1/2 DMA acquisitions
+void myADC_watchdog_handler( void )
+{
+	//uint32_t remaining = DMA1->CH[0].CNDTR;
+	//awd_position = BUFFER_SIZE - remaining;  // ← Position im Buffer
+    //awd_triggered = true;
+}
+
 
 void myTIM2Handler( void )		//not ticking yet
 {
-	TIMER_clear_interrupt(2);
+	TIMER2_clear_interrupt();
 
 	gTim2Counter++;
 	setWord( 0x20009004, gTim2Counter );
 }
 
-void mySysTickHandler( void )	//ticks every ms
-{
-	gTickCounter_ms++;
-	setWord( 0x20009000, gTickCounter_ms );		//just to check if works
-}
 
-//using handler works ok. maybe to improve speed one could employ DMA...
+// SPI handler fetches new SPI command and changes state accordingly to STATE_CMDRECEIVED
+// CMD_ABORT overwrites that. Also STATE_FAST_TRANSFER is taking precedence
 void mySPI1Handler( void )		// THE HANDLER has to be executed quickly: receive and send depending on current state
 {
-	//maybe check what interrup exactly this was
 	setWord( 0x2000901C, getWord( 0x2000901C ) + 1);	//to check if its working
+
 	uint16_t received = SPI_receive();	// should we check for -1 (probably not necessary)
 	setWord( 0x20009018, received );
 	uint8_t *receivedCMD = (uint8_t*)&received + 1;
@@ -189,20 +272,20 @@ void mySPI1Handler( void )		// THE HANDLER has to be executed quickly: receive a
 	{
 		//should we decide here if that request is fine?
 		//abort & very simple cases:
-		if( (receivedCMD[0] == CMD_FFETCH) && (gDataReady == 0) )
+		if( (receivedCMD[0] == CMD_FFETCH) && (gDataReady == 0) )		//receive fetch but have not data --> error
 		{
 			SPI_send( SPIPACKET( RESP_ERR, DATA_NULL )  );
 			return;
 		}
 
-		if( receivedCMD[0] == CMD_DRDY )
+		if( receivedCMD[0] == CMD_DRDY )								//receive data ready request --> simply reply
 		{
 			SPI_send( SPIPACKET( RESP_ACK, gDataReady ) );
 			return;
 		}
 
-		gLastCmd = received;
-		gState = STATE_CMDRECEIVED;
+		gLastCmd = received;				//
+		gState = STATE_CMDRECEIVED;			// change state machine
 
 		SPI_send( SPIPACKET( RESP_ACK, DATA_NULL )  );		//if it is asked for data we should check data ready here??
 		return;
@@ -219,7 +302,6 @@ void main_loop( void )
 	while( running )
 	{
 		setWord( 0x2000900C, getWord(0x2000900C) + 1 );
-		setWord( 0x20009008, TIMER_getcount(2) );
 		if( gState == STATE_ABORT )
 		{
 
@@ -227,17 +309,23 @@ void main_loop( void )
 		else if( gState == STATE_CMDRECEIVED )
 		{
 			uint8_t cmd = gLastCmd >> 8;
+			setWord( 0x2000903C, cmd );
 			//uint8_t data = gLastCmd & 0xFF;
 			switch( cmd )	//only cmd
 			{
+
 				case CMD_FFETCH:		//
 					//1. check if data is ready
 					if( gDataReady == 1 )
 					{
-						gTransferLength = gDatapointsAcquired;
+						gDataIndex = 0;
+						gTransferLength = 64;
 						setWord( 0x20000000, gTransferLength );		//set length of remaing transfer into first bit.
 						gState = STATE_FAST_TRANSFER;
 					}
+
+					///why is this never set?
+					setWord( 0x2000903C, 0xFF );
 
 					break;
 				case CMD_ACQU:
@@ -245,7 +333,9 @@ void main_loop( void )
 					gDataReady = 0;
 					gDatapointsAcquired = 0;
 					gState = STATE_ACQUIRE_DATA;
-					//do the actual acquisition
+
+					DAQ1_start();
+
 					break;
 				default:
 					gState = STATE_IDLE;
@@ -254,15 +344,7 @@ void main_loop( void )
 		}
 		else if( gState == STATE_ACQUIRE_DATA )
 		{
-			// acquire data --> this could be done via DMA
-			while( gDatapointsAcquired < 100 )
-			{
-				setWord( (0x20000004 + 4*gDatapointsAcquired), ADC_read_single( 1 ) );
-				gDatapointsAcquired++;
-			}
-			// then set Data is ready and go back to idle. --> this could be done in some interrupt
-			gDataReady = 1;
-			gState = STATE_IDLE;
+			//do nothing
 		}
 	}
 }
