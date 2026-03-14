@@ -37,6 +37,11 @@ enum trigger_modes
 	TRIG_CH4
 };
 
+#define CH1 0x1
+#define CH2 0x2
+#define CH3 0x4
+#define CH4 0x8
+
 #define DATA_NULL 0x0
 //send commands (i.e. replies): when reply starts with 1 --> REPLY + DATA, if most signifcant bit is 0 --> all remaining bits are data
 #define RESP_WAIT 0xA3		// 10100011
@@ -44,7 +49,9 @@ enum trigger_modes
 #define RESP_ACK 0xA6		// 10100110
 #define RESP_DONE 0xA7		// 10100111
 
-//commands from pi
+
+
+//COMMANDS FROM PI:
 #define CMD_ECHO  0x53		// 01010011		for debugging
 #define CMD_ABORT 0x5F		// 01011111
 #define CMD_QUERY 0x50 		// 01010000
@@ -54,7 +61,6 @@ enum trigger_modes
 #define CMD_SET_TB 		0x71	// 01110001		settings, set timebase	--> full duration
 #define CMD_SET_TRIG 	0x72	// 01110010		settings, set trigger
 #define CMD_SET_MODE 	0x73	// 01110011		settings set trigger mode (circular buffer or software trigger)
-
 
 //data acquisition:
 #define CMD_DRDY 0x60		// 01100000	-- ask if data is ready
@@ -71,52 +77,54 @@ static inline uint16_t SPIDATAPACKET( uint16_t data )
     return data & 0x7FFF;
 }
 
-uint16_t gLastCmd;
+uint8_t gLastCmd;
+uint8_t gLastData;
 uint32_t gState;
 
-
-uint32_t gDataReady;
-uint32_t gDataIndex;
-uint32_t gTransferLength;
-
+uint32_t gDataReady;	//binary encoding 0b1111 for all four channels, 0b0001 for channel 1
+uint32_t gDataStart;		//channel 1 & 2 --> 0x20000000, ...
+uint32_t gDataBitShift;		//channel1: 0 channel2: 16
+uint32_t gDataTransferSize;	//number of datapoints
+uint32_t gDataIndex; 		//start with 0 and count up to gDataTransferSize
 uint32_t gDatapointsAcquired;
+
+
 
 uint32_t gTickCounter_ms;
 uint32_t gTim2Counter;
 
-uint32_t gTriggerMode;		//software or hardware (channel, v-level, t-position)
-uint32_t gTriggerLevel;
-uint32_t gTriggerPos;
 
+//settings to be set via cmds
+uint32_t g_settings_triggerMode;		//software or hardware (channel, v-level, t-position)
+uint32_t g_settings_triggerLevel;
+uint32_t g_settings_triggerPos;
 
 //settings that can be changed via SPI and define the DAQ
 uint32_t g_settings_datapoints;			// fixed at 1024 (max)
 uint32_t g_settings_adc_time;			// 000 = 1.5 cycles to 111 = 601,5 cycles per ADC - must be set in ADC SMPR1 register
 uint32_t g_settings_acquisition_speed;	// how many datapoints per second (defines timer settings)
-
+uint32_t g_settings_enabledChannels;
 
 //volatile uint32_t gSomething = 9;			//this would go into the data section... does it need to be copied in reset handler? it does not seem so...
 
 int main( void )
 {
-	//setVTOR();		//maybe this was missing?
-
+	//some globals
 	gState = STATE_STARTUP;
 	//gErrState = ERRSTATE_NOERR;
 	gLastCmd = 0;
 	gTickCounter_ms = 0;
 	gTim2Counter = 1;
 
-	gTransferLength = 0;
-
-	g_settings_datapoints = 128;
-	g_settings_adc_time = 0x4; // 19.5 cycles
-
 	//these need to be changeable by commands
-	gTriggerMode = TRIG_SOFTWARE;
-	gTriggerLevel = 512;
-	gTriggerPos = 64;
+	g_settings_datapoints = 64;		//per channel
+	g_settings_adc_time = 0x4; 		// 19.5 cycles
+	g_settings_enabledChannels = CH1 & CH2;
+	g_settings_enabledChannels = 0x3;
 
+	g_settings_triggerMode = TRIG_SOFTWARE;
+	g_settings_triggerLevel = 512;
+	g_settings_triggerPos = 64;
 
 	//clear normal SRAM for scope data
 	for( int i = 0; i < 16; i++ )
@@ -125,7 +133,7 @@ int main( void )
 	}
 	for( int i = 0; i < 1024; i++ )
 	{
-		setWord( 0x20000004 + i*4, 0 );
+		setWord( 0x20000000 + i*4, 0 );
 	}
 
 	//setup interrupt handlers:
@@ -149,10 +157,11 @@ int main( void )
 	SPI_enable_interrupt( 1, SPI_RXNEI );
 	SPI_send( SPIPACKET( RESP_ACK, DATA_NULL )  );	//load first acknowledge response (could do this within enable)
 
-	DAQ1_setup();
+	DAQ12_setup();	//always configure both channels together
+	//DAQ34_setup();
 
-	setWord( 0x20009014, 0xF0F0F0FF );
-	gDataIndex = 0;
+	//setWord( 0x20009014, 0xF0F0F0FF );
+
 	gState = STATE_IDLE;
 	gLastCmd = 0;
 	gDataReady = 0;
@@ -177,13 +186,15 @@ int main( void )
 // in case the trigger mode changes the handlers are updated:
 void updateHandlers( void )
 {
-	if( gTriggerMode == TRIG_SOFTWARE )
+	if( g_settings_triggerMode == TRIG_SOFTWARE )
 	{
 		setHandler_DMA( 1, 1, myDMA1_transfer_complete_SWtrig );
+		//setHandler_DMA( 2, ..., myDMA1_transfer_complete_SWtrig );
 	}
 	else
 	{
 		setHandler_DMA( 1, 1, myDMA1_transfer_complete_HWtrig );
+		//setHandler_DMA( 2, ..., myDMA1_transfer_complete_SWtrig );
 		setHandler_ADC( 1, myADC_watchdog_handler );
 		setHandler_ADC( 2, myADC_watchdog_handler );
 		setHandler_ADC( 3, myADC_watchdog_handler );
@@ -201,25 +212,31 @@ void myDMA1_transfer_complete_SWtrig( void )
 {
 	// stop the timer!
 	//Immediately stop TIM2 (CEN=0) or clear EXTEN=0.
-	setWord( 0x20009034, getWord( 0x20009034 ) + 1 );
-	setWord( 0x20009030, 0xF0FF00F0 );
+	//debug
+	setWord( 0x20009030, 0xF );
+	setWord( 0x2000903C, getWord( 0x2000903C ) + 1 );
 
 	//clear interrupt
-	DAQ1_stop();
+	DAQ12_stop();
 	DMA_clear_interrupts( 1 );
 
-	gDatapointsAcquired = 64;
-	gDataReady = 1;
+	gDatapointsAcquired = g_settings_datapoints;
+	gDataReady = g_settings_enabledChannels;
+	setWord(0x20009034, gDataReady);
+
 	gState = STATE_IDLE;
 }
 
+void myDMA2_transfer_complete_SWtrig( void )
+{
+	setWord( 0x20009038, getWord( 0x20009038 ) + 1 );
+}
+
+// for hardware trigger
 void myDMA1_transfer_complete_HWtrig( void )
 {
 
 }
-
-
-
 
 // for hardware trigger (watchdog) mode: called whenever a value is crossed... ---> should still continue for 1/2 DMA acquisitions
 void myADC_watchdog_handler( void )
@@ -229,7 +246,7 @@ void myADC_watchdog_handler( void )
     //awd_triggered = true;
 }
 
-
+// not really needed - had that for testing
 void myTIM2Handler( void )		//not ticking yet
 {
 	TIMER2_clear_interrupt();
@@ -238,55 +255,57 @@ void myTIM2Handler( void )		//not ticking yet
 	setWord( 0x20009004, gTim2Counter );
 }
 
-
 // SPI handler fetches new SPI command and changes state accordingly to STATE_CMDRECEIVED
 // CMD_ABORT overwrites that. Also STATE_FAST_TRANSFER is taking precedence
 void mySPI1Handler( void )		// THE HANDLER has to be executed quickly: receive and send depending on current state
 {
+	uint16_t received = SPI_receive();
+	gLastCmd = received >> 8;
+	gLastData = received & 0xFF;
+
+	//debug:
+	setWord( 0x20009010, received );
+	setWord( 0x20009014, gLastCmd );
+	setWord( 0x20009018, gLastData );
 	setWord( 0x2000901C, getWord( 0x2000901C ) + 1);	//to check if its working
 
-	uint16_t received = SPI_receive();	// should we check for -1 (probably not necessary)
-	setWord( 0x20009018, received );
-	uint8_t *receivedCMD = (uint8_t*)&received + 1;
-
-	if( receivedCMD[0] == CMD_ABORT )	//ignores current state
+	if( gLastCmd == CMD_ABORT )	//ignores current state
 	{
 		gState = STATE_ABORT;			//let
 		SPI_send( SPIPACKET( RESP_ACK, DATA_NULL )  );
 		return;
 	}
 
+	//act by state:
 	if( gState == STATE_FAST_TRANSFER )	//just send data until done --> potentially "very fast" 30k transfers per second, when STM32 is running at 72kHz
 	{
-		SPI_send( getWord( 0x20000000 + gDataIndex*4) );
+		SPI_send( (getWord( gDataStart + gDataIndex*4 ) >> gDataBitShift) );		//only sends 16 bits
 		gDataIndex++;
-		if( gDataIndex > gTransferLength )
+		if( gDataIndex > gDataTransferSize )
 		{
 			gState = STATE_IDLE;
 			gDataIndex = 0;
-			gDataReady = 0;		//reset here?
+
+			//gDataReady = 0;	//should only unset correct bit
 		}
 		return;
 	}
 	else if( gState == STATE_IDLE )
 	{
-		//should we decide here if that request is fine?
-		//abort & very simple cases:
-		if( (receivedCMD[0] == CMD_FFETCH) && (gDataReady == 0) )		//receive fetch but have not data --> error
+		/* in idle state we can reply immediately if its just a single reply */
+		if( (gLastCmd == CMD_FFETCH) && !CHKBIT( gDataReady, gLastData - 1 ) )
 		{
-			SPI_send( SPIPACKET( RESP_ERR, DATA_NULL )  );
+			SPI_send( SPIPACKET( RESP_ERR, gDataReady )  );
 			return;
 		}
 
-		if( receivedCMD[0] == CMD_DRDY )								//receive data ready request --> simply reply
+		if( gLastCmd == CMD_DRDY )								//receive data ready request --> simply reply
 		{
 			SPI_send( SPIPACKET( RESP_ACK, gDataReady ) );
 			return;
 		}
 
-		gLastCmd = received;				//
 		gState = STATE_CMDRECEIVED;			// change state machine
-
 		SPI_send( SPIPACKET( RESP_ACK, DATA_NULL )  );		//if it is asked for data we should check data ready here??
 		return;
 	}
@@ -304,38 +323,41 @@ void main_loop( void )
 		setWord( 0x2000900C, getWord(0x2000900C) + 1 );
 		if( gState == STATE_ABORT )
 		{
-
+			gState = STATE_IDLE;
 		}
 		else if( gState == STATE_CMDRECEIVED )
 		{
-			uint8_t cmd = gLastCmd >> 8;
-			setWord( 0x2000903C, cmd );
-			//uint8_t data = gLastCmd & 0xFF;
-			switch( cmd )	//only cmd
+			switch( gLastCmd )	//only cmd
 			{
-
-				case CMD_FFETCH:		//
+				case CMD_DRDY:
+					break;
+				case CMD_FFETCH:		// which channel is defined by data. only one channel can be transferred at a  time, because the package size is 16 bits.
+					//
 					//1. check if data is ready
-					if( gDataReady == 1 )
+					//if( gDataReadyCh1 == 1 )
+					gDataIndex = 0;
+					gDataStart = 0x20000000;
+					gDataBitShift = 0;
+
+					if( (gLastData == 3) || (gLastData == 4) )
 					{
-						gDataIndex = 0;
-						gTransferLength = 64;
-						setWord( 0x20000000, gTransferLength );		//set length of remaing transfer into first bit.
-						gState = STATE_FAST_TRANSFER;
+						gDataStart = 0x20000400;		//offset
+					}
+					if( (gLastData == 2) || (gLastData == 4) )
+					{
+						gDataBitShift = 16;
 					}
 
-					///why is this never set?
-					setWord( 0x2000903C, 0xFF );
-
+					gDataTransferSize = g_settings_datapoints;
+					setWord( 0x20000000, gDataTransferSize + (gDataTransferSize << 16) );		//set length of remaing transfer into first bit.
+					gState = STATE_FAST_TRANSFER;
 					break;
 				case CMD_ACQU:
 					//prep data acqu
-					gDataReady = 0;
+					gDataReady = 0;		//during acquisition no data is ready
 					gDatapointsAcquired = 0;
 					gState = STATE_ACQUIRE_DATA;
-
-					DAQ1_start();
-
+					DAQ12_start();	// always acquire data for 1 & 2 in parallel if enabled
 					break;
 				default:
 					gState = STATE_IDLE;
