@@ -5,7 +5,7 @@ void mySPI1Handler( void );
 void myTIM2Handler( void );
 
 void myDMA1_transfer_complete_SWtrig( void );
-void myDMA1_transfer_complete_HWtrig( void );
+void myDMA1_HWtrig( void );
 void myADC_watchdog_handler( void );
 
 void updateHandlers( void );
@@ -119,7 +119,7 @@ int main( void )
 	//these need to be changeable by commands
 	g_settings_datapoints = 64;		//per channel
 	g_settings_adc_time = 0x4; 		// 19.5 cycles
-	g_settings_enabledChannels = CH1 & CH2;
+	g_settings_enabledChannels = CH1 | CH2;
 	g_settings_enabledChannels = 0x3;
 
 	g_settings_triggerMode = TRIG_SOFTWARE;
@@ -193,7 +193,7 @@ void updateHandlers( void )
 	}
 	else
 	{
-		setHandler_DMA( 1, 1, myDMA1_transfer_complete_HWtrig );
+		setHandler_DMA( 1, 1, myDMA1_HWtrig );
 		//setHandler_DMA( 2, ..., myDMA1_transfer_complete_SWtrig );
 		setHandler_ADC( 1, myADC_watchdog_handler );
 		setHandler_ADC( 2, myADC_watchdog_handler );
@@ -233,9 +233,9 @@ void myDMA2_transfer_complete_SWtrig( void )
 }
 
 // for hardware trigger
-void myDMA1_transfer_complete_HWtrig( void )
+void myDMA1_HWtrig( void )
 {
-
+	//half buffer and full buffer events
 }
 
 // for hardware trigger (watchdog) mode: called whenever a value is crossed... ---> should still continue for 1/2 DMA acquisitions
