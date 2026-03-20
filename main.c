@@ -147,8 +147,8 @@ int main( void )
 	//CLOCK_init( SYSCLK_HSE );
 	//CLOCK_start_PLL( SYSCLK_HSE );	//needed for fast ADC already started when using PLL
 
-	uint32_t clkSpd = CLOCK_get_sysClk();		//this uint32_t seems to mess up the SPI communication... SOMETIMES
-	SYSTICK_enable( clkSpd );				//enabled --> mySysTickHandler() gets called every ms
+//	uint32_t clkSpd = CLOCK_get_sysClk();		//this uint32_t seems to mess up the SPI communication... SOMETIMES
+//	SYSTICK_enable( clkSpd );				//enabled --> mySysTickHandler() gets called every ms
 
 	GPIO_init();	//enables GPIO clocks
 
@@ -266,6 +266,10 @@ void main_loop( void )
 		setWord( 0x20009008, gState );
 		if( gState == STATE_ABORT )
 		{
+			gDataReady = 0;		//during acquisition no data is ready
+			gDatapointsAcquired = 0;
+			DAQ12_start();	// always acquire data for 1 & 2 in parallel if enabled
+			//maybe restart here?
 			gState = STATE_IDLE;
 		}
 		else if( gState == STATE_FAST_TRANSFER_DONE )
