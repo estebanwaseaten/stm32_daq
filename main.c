@@ -45,7 +45,13 @@ enum error_states
 #define CMD_QUERY 0x50 		// 01010000
 #define CMD_STATE 0x5A		// ...
 
-//per channel: last 2 bits
+// DAQ commands global
+#define CMD_GET_TIM2_MHZ 		0x42		// 01001010		--> fetch MHZ of timer (should be 144?)
+#define CMD_SET_TIM2_ARR 		0x4B		// 01001011
+#define CMD_GET_TIM2_ARRHI 		0x4A		// 01001010
+#define CMD_GET_TIM2_ARRLO 		0x4C		// 01001100
+
+//DAQ commands per channel: last 2 bits of data portion defines channel
 //settings
 #define CMD_SET_TB 		0x71	// 01110001		settings, set timebase	--> full duration
 #define CMD_SET_TRIG 	0x72	// 01110010		settings, set trigger
@@ -184,7 +190,11 @@ void myTIM2Handler( void )		//not ticking yet
 // CMD_ABORT overwrites that. Also STATE_FAST_TRANSFER is taking precedence
 void mySPI1Handler( void )		// THE HANDLER has to be executed fast: receive and send depending on current state
 {
-	uint16_t received = SPI_receive();
+	int receivedInt = SPI_receive();
+	if( receivedInt == -1 )
+		return;
+
+	uint16_t received = receivedInt;
 	gLastCmdSPI = received >> 8;
 	gLastDataSPI = received & 0xFF;
 
@@ -230,7 +240,7 @@ void mySPI1Handler( void )		// THE HANDLER has to be executed fast: receive and 
 	}
 	else if( gState == STATE_IDLE )
 	{
-		/* in idle state we can reply immediately if its just a single reply */
+		/* in idle state we can reply immediately if its just a single function call based reply - only call fast function*/
 		if( (gLastCmdSPI == CMD_FETCH) && !CHKBIT( gDataReady, gLastDataSPI - 1 ) )		//-->
 		{
 			SPI_send( SPIPACKET( RESP_ERR, gDataReady )  );
@@ -245,6 +255,21 @@ void mySPI1Handler( void )		// THE HANDLER has to be executed fast: receive and 
 		{
 			SPI_send( SPIPACKET( RESP_ACK, gState ) );
 			return;
+		}
+		else if( gLastCmdSPI == CMD_GET_TIM2_MHZ )
+		{
+			SPI_send( SPIPACKET( RESP_ACK, (uint16_t)(TIMER2_getClockHz()/1000000) ) );
+			return;
+		}
+		else if( gLastCmdSPI == CMD_GET_TIM2_ARRHI )
+		{
+			SPI_send(  (uint16_t)( TIMER2_getCountTo() >> 16 ) );
+			return;
+		}
+		else if( gLastCmdSPI == CMD_GET_TIM2_ARRLO )
+		{
+			SPI_send( (uint16_t)( TIMER2_getCountTo() & 0xFFFF ) );
+			return ;
 		}
 
 		gState = STATE_CMDRECEIVED;			// change state machine
@@ -310,6 +335,11 @@ void main_loop( void )
 					//
 					DAQ12_pause();
 
+					gState = STATE_IDLE;
+					break;
+				case CMD_SET_TIM2_ARR:
+					DAQ_setARR( gLastDataSPI );
+				//	TIMER2_setARRHI( gLastDataSPI );
 					gState = STATE_IDLE;
 					break;
 				default:
