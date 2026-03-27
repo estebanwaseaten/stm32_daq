@@ -37,8 +37,6 @@ enum error_states
 #define RESP_ACK 0xA6		// 10100110
 #define RESP_DONE 0xA7		// 10100111
 
-
-
 //COMMANDS FROM PI:
 #define CMD_ECHO  0x53		// 01010011		for debugging
 #define CMD_ABORT 0x5F		// 01011111
@@ -46,17 +44,19 @@ enum error_states
 #define CMD_STATE 0x5A		// ...
 
 // DAQ commands global
-#define CMD_GET_TIM2_MHZ 		0x42		// 01001010		--> fetch MHZ of timer (should be 144?)
+#define CMD_GET_TIM2_MHZ 		0x42		// 01000010		--> fetch MHZ of timer (should be 144?)
 #define CMD_SET_TIM2_ARR 		0x4B		// 01001011
 #define CMD_GET_TIM2_ARRHI 		0x4A		// 01001010
 #define CMD_GET_TIM2_ARRLO 		0x4C		// 01001100
 
-//DAQ commands per channel: last 2 bits of data portion defines channel
-//settings
-#define CMD_SET_TB 		0x71	// 01110001		settings, set timebase	--> full duration
-#define CMD_SET_TRIG 	0x72	// 01110010		settings, set trigger
-#define CMD_SET_MODE 	0x73	// 01110011		settings set trigger mode (circular buffer or software trigger)
+//Trigger commands
+#define CMD_GET_TRIG_MODE 		0x70	// 01110000		settings, set trigger (0 --> software, 1, 2, 3, 4 -->HW channel)
+#define CMD_SET_TRIG_MODE 		0x71	// 01110001		settings, set trigger (0 --> software, 1, 2, 3, 4 -->HW channel)
+#define CMD_GET_TRIG_LEVEL 		0x72	// 01110010		settings, set trigger (0 --> software, 1, 2, 3, 4 -->HW channel)
+#define CMD_SET_TRIG_LEVEL 		0x73	// 01110011		settings, set trigger (0 --> software, 1, 2, 3, 4 -->HW channel)
 
+
+//DAQ commands per channel: last 2 bits of data portion defines channel
 //data acquisition:
 #define CMD_DRDY 	0x60		// 01100000	-- ask if data is ready return 4bits for 4 channels
 #define CMD_ACQU 	0x61 		// 01100001 -- tell to acquire data --> run circular buffer until either HW or SW trigger fires
@@ -96,9 +96,9 @@ extern uint32_t gDataCounter;		//start with 0 and count up to gDataTransferSize
 extern uint32_t gDatapointsAcquired;
 
 //settings to be set via cmds
-extern uint32_t g_settings_triggerMode;		//software or hardware (channel, v-level, t-position)
-extern uint32_t g_settings_triggerLevel;
-extern uint32_t g_settings_triggerPos;
+extern uint16_t g_settings_triggerMode;		//software or hardware (channel, v-level, t-position)
+extern uint16_t g_settings_triggerLevel;	//12 bit
+extern uint16_t g_settings_triggerPos;
 
 //settings that can be changed via SPI and define the DAQ
 extern uint32_t g_settings_datapoints;			// fixed at 1024 (max)
@@ -123,16 +123,17 @@ int main( void )
 	gTickCounter_ms = 0;
 	gTim2Counter = 1;
 
-
 	//these need to be changeable by commands
 	g_settings_datapoints = 512;		//per channel	--> buffer = 4*512 = 2048
 	g_settings_adc_time = 0x4; 		// 19.5 cycles
 	g_settings_enabledChannels = CH1;// | CH2;
 	//g_settings_enabledChannels = 0x3;
 
-	g_settings_triggerMode = TRIG_SOFTWARE;
-	g_settings_triggerLevel = 512;
-	g_settings_triggerPos = 4;
+
+	//set some daq settings
+	DAQ_config_trigger_mode( TRIG_SOFTWARE );
+	DAQ_config_trigger_level( 0x4FF );
+	DAQ_config_trigger_pos( 2000 );
 
 	//clear normal SRAM for scope data
 	for( int i = 0; i < 16; i++ )
@@ -269,7 +270,17 @@ void mySPI1Handler( void )		// THE HANDLER has to be executed fast: receive and 
 		else if( gLastCmdSPI == CMD_GET_TIM2_ARRLO )
 		{
 			SPI_send( (uint16_t)( TIMER2_getCountTo() & 0xFFFF ) );
-			return ;
+			return;
+		}
+		else if ( gLastCmdSPI == CMD_GET_TRIG_MODE )
+		{
+			SPI_send( g_settings_triggerMode );
+			return;
+		}
+		else if ( gLastCmdSPI == CMD_GET_TRIG_LEVEL )
+		{
+			SPI_send( g_settings_triggerLevel );
+			return;
 		}
 
 		gState = STATE_CMDRECEIVED;			// change state machine
@@ -338,7 +349,7 @@ void main_loop( void )
 					gState = STATE_IDLE;
 					break;
 				case CMD_SET_TIM2_ARR:
-					DAQ_setARR( gLastDataSPI );
+					DAQ_config_ARR( gLastDataSPI );
 				//	TIMER2_setARRHI( gLastDataSPI );
 					gState = STATE_IDLE;
 					break;
