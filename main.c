@@ -1,14 +1,8 @@
 #include "main.h"
 
+// for program logic
 void mySPI1Handler( void );
 void myTIM2Handler( void );
-
-void myDMA1_transfer_complete_SWtrig( void );
-void myDMA1_HWtrig( void );
-void myADC_watchdog_handler( void );
-
-void updateHandlers( void );
-
 
 enum main_states
 {
@@ -27,8 +21,6 @@ enum error_states
 		ERRSTATE_NOERR,
 		ERRSTATE_ERR
 };
-
-
 
 #define DATA_NULL 0x0
 //send commands (i.e. replies): when reply starts with 1 --> REPLY + DATA, if most signifcant bit is 0 --> all remaining bits are data
@@ -84,7 +76,6 @@ uint8_t gLastCmdSPI;
 uint8_t gLastDataSPI;
 uint32_t gState;
 
-
 // data transfer globals (from _daq.c)
 extern uint32_t gDataReady;	//binary encoding 0b1111 for all four channels, 0b0001 for channel 1
 extern uint32_t gDataStart;		//channel 1 & 2 --> 0x20000000, ...
@@ -96,11 +87,8 @@ extern uint32_t gDataCounter;		//start with 0 and count up to gDataTransferSize
 extern uint32_t gDatapointsAcquired;
 
 //settings to be set via cmds
-extern uint16_t g_settings_triggerMode;		//software or hardware (channel, v-level, t-position)
-extern uint16_t g_settings_triggerLevel;	//12 bit
-extern uint16_t g_settings_triggerPos;
 
-//settings that can be changed via SPI and define the DAQ
+
 extern uint32_t g_settings_datapoints;			// fixed at 1024 (max)
 extern uint32_t g_settings_adc_time;			// 000 = 1.5 cycles to 111 = 601,5 cycles per ADC - must be set in ADC SMPR1 register
 extern uint32_t g_settings_acquisition_speed;	// how many datapoints per second (defines timer settings)
@@ -164,7 +152,7 @@ int main( void )
 	SPI_enable_interrupt( 1, SPI_RXNEI );
 	SPI_send( SPIPACKET( RESP_ACK, DATA_NULL )  );	//load first acknowledge response (could do this within enable)
 
-	DAQ12_setup();	//always configure both channels together
+	DAQ12_setup();	//always configure both channels together. also starts the DAQ (software trigger)
 	//DAQ34_setup();
 
 	//initialisation is done
@@ -274,12 +262,12 @@ void mySPI1Handler( void )		// THE HANDLER has to be executed fast: receive and 
 		}
 		else if ( gLastCmdSPI == CMD_GET_TRIG_MODE )
 		{
-			SPI_send( g_settings_triggerMode );
+            SPI_send( DAQ_config_trigger_mode_get() );
 			return;
 		}
 		else if ( gLastCmdSPI == CMD_GET_TRIG_LEVEL )
 		{
-			SPI_send( g_settings_triggerLevel );
+            SPI_send( DAQ_config_trigger_level_get() );
 			return;
 		}
 
@@ -310,11 +298,21 @@ void main_loop( void )
 		}
 		else if( gState == STATE_FAST_TRANSFER_DONE )
 		{
-			if( (gDataReady == 0) && ( g_settings_triggerMode == TRIG_SOFTWARE) )
+            uint16_t trigMode = DAQ_config_trigger_mode_get();
+            gDataReady = 0;
+            gDatapointsAcquired = 0;
+			if( (gDataReady == 0) && ( trigMode == TRIG_SOFTWARE) )
 			{
 				//in software trigger mode, resume DAQ if all data has been transferred
 				DAQ12_resume();
 			}
+
+            if( trigMode != TRIG_SOFTWARE )
+            {
+                //hardware triggered... also resume, but also re-arm the watchdog??
+            }
+
+
 			gState = STATE_IDLE;
 		}
 		else if( gState == STATE_CMDRECEIVED )
@@ -325,20 +323,19 @@ void main_loop( void )
 					break;
 				case CMD_FETCH:		// which channel is defined by data. only one channel can be transferred at a  time, because the package size is 16 bits.
 					//in hardware mode or auto mode --> fetch the most recent data if available
-					//should already be paused??
-
 					//in software mode --> pause acquisition and transfer data
 					DAQ12_pause();
-					//check if data is ready ---> was already done
 
+                    //data is transferred from current DMA position:
 					DAQ_prepFetch( gLastDataSPI );	//preps params for fast fetch state. gLastDataSPI contains requested channel number
 					gState = STATE_FAST_TRANSFER;
 					break;
-				case CMD_ACQU:		//always restarts data acquisition
-					//prep data acqu
+                case CMD_ACQU:		//always restarts data acquisition (either start free running or start hardware triggered)
+
+                    //prep data acqu
 					gDataReady = 0;		//during acquisition no data is ready
 					gDatapointsAcquired = 0;
-					DAQ12_start();	// always acquire data for 1 & 2 in parallel if enabled
+                    DAQ12_start();	// always acquire data for 1 & 2 in parallel if enabled
 
 					gState = STATE_IDLE;
 					break;
@@ -351,6 +348,12 @@ void main_loop( void )
 				case CMD_SET_TIM2_ARR:
 					DAQ_config_ARR( gLastDataSPI );
 				//	TIMER2_setARRHI( gLastDataSPI );
+					gState = STATE_IDLE;
+					break;
+				case CMD_SET_TRIG_MODE:	//gLastDataSPI should contain... something
+					DAQ_config_trigger_mode( gLastDataSPI );
+					DAQ_config_trigger_level( 0x100 );
+					DAQ_config_trigger_pos( 2000 );
 					gState = STATE_IDLE;
 					break;
 				default:
