@@ -36,10 +36,12 @@ enum error_states
 #define CMD_STATE 0x5A		// ...
 
 // DAQ commands global
-#define CMD_GET_TIM2_MHZ 		0x42		// 01000010		--> fetch MHZ of timer (should be 144?)
-#define CMD_SET_TIM2_ARR 		0x4B		// 01001011
-#define CMD_GET_TIM2_ARRHI 		0x4A		// 01001010
-#define CMD_GET_TIM2_ARRLO 		0x4C		// 01001100
+#define CMD_SET_TIMEBASE 		0x4B		// 01001011
+
+#define CMD_GET_MHZ 		    0x42		// 01000010		--> fetch MHZ of timer (should be 144?)
+#define CMD_GET_ARRHI 		    0x4A		// 01001010
+#define CMD_GET_ARRLO 		    0x4C		// 01001100
+#define CMD_GET_PRESCALER       0x4D
 
 //Trigger commands
 #define CMD_GET_TRIG_MODE 		0x70	// 01110000		settings, set trigger (0 --> software, 1, 2, 3, 4 -->HW channel)
@@ -87,13 +89,11 @@ extern uint32_t gDataCounter;		//start with 0 and count up to gDataTransferSize
 extern uint32_t gDatapointsAcquired;
 
 //settings to be set via cmds
-
-
-extern uint32_t g_settings_datapoints;			// fixed at 1024 (max)
+/*extern uint32_t g_settings_datapoints;			// fixed at 1024 (max)
 extern uint32_t g_settings_adc_time;			// 000 = 1.5 cycles to 111 = 601,5 cycles per ADC - must be set in ADC SMPR1 register
 extern uint32_t g_settings_acquisition_speed;	// how many datapoints per second (defines timer settings)
 extern uint32_t g_settings_enabledChannels;
-
+*/
 
 //counter variables for testing
 uint32_t gTickCounter_ms;
@@ -111,18 +111,6 @@ int main( void )
 	gTickCounter_ms = 0;
 	gTim2Counter = 1;
 
-	//these need to be changeable by commands
-	g_settings_datapoints = 512;		//per channel	--> buffer = 4*512 = 2048
-	g_settings_adc_time = 0x4; 		// 19.5 cycles
-	g_settings_enabledChannels = CH1;// | CH2;
-	//g_settings_enabledChannels = 0x3;
-
-
-	//set some daq settings
-	DAQ_config_trigger_mode( TRIG_SOFTWARE );
-	DAQ_config_trigger_level( 0x4FF );
-	DAQ_config_trigger_pos( 2000 );
-
 	//clear normal SRAM for scope data
 	for( int i = 0; i < 16; i++ )
 	{
@@ -136,7 +124,7 @@ int main( void )
 	//setup interrupt handlers:
 	setHandler_SPI1( mySPI1Handler );		//this seems to work, but somehow the interrupt never gets triggered...
 	//other handlers are set in DAQ
-	//setHandler_TIM2( myTIM2Handler );		//just for testing
+
 
 	CLOCK_init( SYSCLK_PLL );		//could also use HSI, but probably more stable as with HSE
 	//CLOCK_init( SYSCLK_HSE );
@@ -145,15 +133,23 @@ int main( void )
 //	uint32_t clkSpd = CLOCK_get_sysClk();		//this uint32_t seems to mess up the SPI communication... SOMETIMES
 //	SYSTICK_enable( clkSpd );				//enabled --> mySysTickHandler() gets called every ms
 
-	GPIO_init();	//enables GPIO clocks
+	GPIO_start_clock();	//enables GPIO clocks
 
-	SPI_init( 1 );	//enables SPI clocks
+    SPI_start_clock( 1 );	//enables SPI clocks
 	SPI_enable( 1, SPI_16BITSPERWORD );
 	SPI_enable_interrupt( 1, SPI_RXNEI );
 	SPI_send( SPIPACKET( RESP_ACK, DATA_NULL )  );	//load first acknowledge response (could do this within enable)
 
-	DAQ12_setup();	//always configure both channels together. also starts the DAQ (software trigger)
+    DAQ12_init();	//always configure both channels together. also starts the DAQ (software trigger)
 	//DAQ34_setup();
+
+    DAQ_config_dataBuffer( 500, true );   //max 4000?
+    DAQ_config_timebase( 0x11 );
+	DAQ_config_trigger_mode( TRIG_SOFTWARE );
+	DAQ_config_trigger_level( 0x4FF );
+	DAQ_config_trigger_pos( 2000 );
+
+    DAQ12_start();
 
 	//initialisation is done
 	gState = STATE_IDLE;
@@ -165,16 +161,6 @@ int main( void )
 
 
 /****** INTERRUPT HANDLERS: ******/
-
-// not really needed anymore - had that for testing - TIM2 triggers the ADCs on its own. now handler needed
-void myTIM2Handler( void )		//not ticking yet
-{
-	TIMER2_clear_interrupt();
-
-	gTim2Counter++;
-	setWord( 0x20009004, gTim2Counter );
-}
-
 // SPI handler fetches new SPI command and changes state accordingly to STATE_CMDRECEIVED
 // CMD_ABORT overwrites that. Also STATE_FAST_TRANSFER is taking precedence
 void mySPI1Handler( void )		// THE HANDLER has to be executed fast: receive and send depending on current state
@@ -245,19 +231,24 @@ void mySPI1Handler( void )		// THE HANDLER has to be executed fast: receive and 
 			SPI_send( SPIPACKET( RESP_ACK, gState ) );
 			return;
 		}
-		else if( gLastCmdSPI == CMD_GET_TIM2_MHZ )
+		else if( gLastCmdSPI == CMD_GET_MHZ )
 		{
 			SPI_send( SPIPACKET( RESP_ACK, (uint16_t)(TIMER2_getClockHz()/1000000) ) );
 			return;
 		}
-		else if( gLastCmdSPI == CMD_GET_TIM2_ARRHI )
+		else if( gLastCmdSPI == CMD_GET_ARRHI )
 		{
-			SPI_send(  (uint16_t)( TIMER2_getCountTo() >> 16 ) );
+            SPI_send(  (uint16_t)( TIMER3_getCountTo() >> 16 ) );
 			return;
 		}
-		else if( gLastCmdSPI == CMD_GET_TIM2_ARRLO )
+        else if( gLastCmdSPI == CMD_GET_ARRLO )
 		{
-			SPI_send( (uint16_t)( TIMER2_getCountTo() & 0xFFFF ) );
+            SPI_send( (uint16_t)( TIMER3_getCountTo() & 0xFFFF ) );
+			return;
+		}
+        else if( gLastCmdSPI == CMD_GET_PRESCALER )
+		{
+            SPI_send( (uint16_t)( TIMER3_getPrescaler() & 0xFFFF ) );
 			return;
 		}
 		else if ( gLastCmdSPI == CMD_GET_TRIG_MODE )
@@ -345,8 +336,8 @@ void main_loop( void )
 
 					gState = STATE_IDLE;
 					break;
-				case CMD_SET_TIM2_ARR:
-					DAQ_config_ARR( gLastDataSPI );
+				case CMD_SET_TIMEBASE:
+                    DAQ_config_timebase( gLastDataSPI );
 				//	TIMER2_setARRHI( gLastDataSPI );
 					gState = STATE_IDLE;
 					break;
