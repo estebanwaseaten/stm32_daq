@@ -36,19 +36,18 @@ enum error_states
 #define CMD_STATE 0x5A		// ...
 
 // DAQ commands global
-#define CMD_SET_TIMEBASE 		0x4B		// 01001011
+#define CMD_SET_TIMEBASE 		0x4B		// 01001011     --> 0beeeeffff: eeee = exponent 10^e; ffff = factor: 0,1 ... 1,0 (in us between measurements)
 
 #define CMD_GET_MHZ 		    0x42		// 01000010		--> fetch MHZ of timer (should be 144?)
-#define CMD_GET_ARRHI 		    0x4A		// 01001010
-#define CMD_GET_ARRLO 		    0x4C		// 01001100
-#define CMD_GET_PRESCALER       0x4D
+#define CMD_GET_ARRHI 		    0x4A		// 01001010     -->-|
+#define CMD_GET_ARRLO 		    0x4C		// 01001100     --> |- so client can calc exact values for dt
+#define CMD_GET_PRESCALER       0x4D        // 01001101     -->-|
 
 //Trigger commands
 #define CMD_GET_TRIG_MODE 		0x70	// 01110000		settings, set trigger (0 --> software, 1, 2, 3, 4 -->HW channel)
 #define CMD_SET_TRIG_MODE 		0x71	// 01110001		settings, set trigger (0 --> software, 1, 2, 3, 4 -->HW channel)
 #define CMD_GET_TRIG_LEVEL 		0x72	// 01110010		settings, set trigger (0 --> software, 1, 2, 3, 4 -->HW channel)
 #define CMD_SET_TRIG_LEVEL 		0x73	// 01110011		settings, set trigger (0 --> software, 1, 2, 3, 4 -->HW channel)
-
 
 //DAQ commands per channel: last 2 bits of data portion defines channel
 //data acquisition:
@@ -140,16 +139,18 @@ int main( void )
 	SPI_enable_interrupt( 1, SPI_RXNEI );
 	SPI_send( SPIPACKET( RESP_ACK, DATA_NULL )  );	//load first acknowledge response (could do this within enable)
 
-    DAQ12_init();	//always configure both channels together. also starts the DAQ (software trigger)
-	//DAQ34_setup();
+    DAQ_init(); //somehow fucks up SPI --> PA5,6,7 are used for SPI
 
-    DAQ_config_dataBuffer( 500, true );   //max 4000?
+    //this is also done in DAQ_init
+/*    DAQ_config_dataBuffer( 500 );   //max 4000?
     DAQ_config_timebase( 0x11 );
 	DAQ_config_trigger_mode( TRIG_SOFTWARE );
 	DAQ_config_trigger_level( 0x4FF );
 	DAQ_config_trigger_pos( 2000 );
 
-    DAQ12_start();
+    DAQ_config_update();
+*/
+    //DAQ12_start();
 
 	//initialisation is done
 	gState = STATE_IDLE;

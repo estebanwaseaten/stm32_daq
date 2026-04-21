@@ -1,0 +1,32 @@
+
+
+PA4 - ADC2_IN1                      // overlaps with DAC1 out
+PA5 - (SPI1_SCK)                      // overlaps with DAC2 out
+PA6 - (SPI1_MISO)
+PA7 - (SPI1_MOSI)
+
+moved SPI to:
+PB3 - SPI1_SCK
+PB4 - SPI1_MISO
+PB5 - SPI1_MOSI
+
+
+
+
+ADC
+
+
+DAC
+
+
+
+
+
+
+
+
+
+SPI4: PE2, PE3, PE4, PE5, PE6, PE11, PE13, PE14
+SPI2: PF9, PF10, PF0(osc), PF1(osc), PB12, PB13, PB14, PB15, PD15, PA10, PA11
+SPI3: PA4, PA15, PC10, PC11, PC12, PB3
+SPI1: PA4, PA5, PA6, PA7, PA15, PB3, PB4, PB5
