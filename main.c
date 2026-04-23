@@ -111,7 +111,7 @@ int main( void )
 	gTim2Counter = 1;
 
 	//clear normal SRAM for scope data
-	for( int i = 0; i < 16; i++ )
+    for( int i = 0; i < 64; i++ )
 	{
 		setWord( 0x20009000 + i*4, 0 );
 	}
@@ -150,7 +150,7 @@ int main( void )
 
     DAQ_config_update();
 */
-    //DAQ12_start();
+    DAQ12_start();
 
 	//initialisation is done
 	gState = STATE_IDLE;
@@ -284,12 +284,17 @@ void main_loop( void )
 		{
 			gDataReady = 0;		//during acquisition no data is ready
 			gDatapointsAcquired = 0;
-			DAQ12_start();	// always acquire data for 1 & 2 in parallel if enabled
-			//maybe restart here?
+            gDataCounter = 0;
+            gDataIndex = 0;
+            //TIMER3_stop();      //wichtig!!! --> in DAQ12_start implementiert
+            DAQ12_start();
 			gState = STATE_IDLE;
 		}
 		else if( gState == STATE_FAST_TRANSFER_DONE )
 		{
+            setWord( 0x200090A0, getWord(0x200090A0) + 1 );  // wird dieser Block erreicht?
+            setWord( 0x200090A4, DAQ_config_trigger_mode_get() );  // trigMode
+
             uint16_t trigMode = DAQ_config_trigger_mode_get();
             gDataReady = 0;
             gDatapointsAcquired = 0;
@@ -316,6 +321,7 @@ void main_loop( void )
 				case CMD_FETCH:		// which channel is defined by data. only one channel can be transferred at a  time, because the package size is 16 bits.
 					//in hardware mode or auto mode --> fetch the most recent data if available
 					//in software mode --> pause acquisition and transfer data
+
 					DAQ12_pause();
 
                     //data is transferred from current DMA position:
@@ -328,7 +334,7 @@ void main_loop( void )
 					gDataReady = 0;		//during acquisition no data is ready
 					gDatapointsAcquired = 0;
                     DAQ12_start();	// always acquire data for 1 & 2 in parallel if enabled
-
+                    //this resets DMA and messes up DAQ in some situations
 					gState = STATE_IDLE;
 					break;
 				case CMD_STOP:		//always pauses acquisition
@@ -339,6 +345,7 @@ void main_loop( void )
 					break;
 				case CMD_SET_TIMEBASE:
                     DAQ_config_timebase( gLastDataSPI );
+                    DAQ_config_update();
 				//	TIMER2_setARRHI( gLastDataSPI );
 					gState = STATE_IDLE;
 					break;
@@ -346,6 +353,7 @@ void main_loop( void )
 					DAQ_config_trigger_mode( gLastDataSPI );
 					DAQ_config_trigger_level( 0x100 );
 					DAQ_config_trigger_pos( 2000 );
+                    DAQ_config_update();
 					gState = STATE_IDLE;
 					break;
 				default:
